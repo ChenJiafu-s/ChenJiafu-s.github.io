@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Digital Rain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        matrix: {
+                            black: '#000000',
+                            green: '#00FF41',
+                            darkgreen: '#003B00'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .matrix-rain {
+                background-color: theme('colors.matrix.black');
+                overflow: hidden;
+                position: relative;
+                margin: 0;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body class="matrix-rain m-0 p-0">
+    <canvas id="matrix" class="w-full h-full"></canvas>
+
+    <script>
+        // 获取Canvas元素并设置其尺寸
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        
+        // 设置Canvas尺寸为窗口大小
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        // 初始化时设置尺寸，并在窗口大小改变时重新设置
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 定义可能出现的字符集（英文字母）
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        
+        // 列宽（字符宽度）
+        const columnWidth = 15;
+        // 计算列数
+        const columns = Math.floor(canvas.width / columnWidth);
+        
+        // 存储每列雨滴的起始位置
+        const drops = [];
+        for (let i = 0; i < columns; i++) {
+            // 随机起始位置，可能在画布上方
+            drops[i] = Math.random() * -100;
+        }
+        
+        // 绘制数字雨
+        function draw() {
+            // 半透明黑色背景，创建渐隐效果
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 设置文字颜色和字体
+            ctx.fillStyle = '#00FF41'; // 绿色
+            ctx.font = '15px Courier New, monospace';
+            
+            // 遍历每一列
+            for (let i = 0; i < drops.length; i++) {
+                // 随机选择一个字符
+                const text = letters[Math.floor(Math.random() * letters.length)];
+                
+                // 在当前位置绘制字符
+                ctx.fillText(text, i * columnWidth, drops[i] * 15);
+                
+                // 当雨滴到达底部或随机重置时，将雨滴重置到顶部
+                if (drops[i] * 15 > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                
+                // 缓慢移动雨滴向下（控制速度）
+                drops[i] += 0.5;
+            }
+        }
+        
+        // 每50毫秒更新一次动画，控制整体速度
+        setInterval(draw, 50);
+    </script>
+</body>
+</html>
