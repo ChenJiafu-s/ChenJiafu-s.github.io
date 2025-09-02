@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows XP 升级</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- 配置Tailwind自定义颜色和字体 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'xp-blue': '#003399',
+                        'xp-light-blue': '#1E90FF',
+                        'xp-gray': '#C0C0C0',
+                        'xp-dark-gray': '#808080',
+                        'xp-bg': '#008080',
+                        'xp-text': '#FFFFFF',
+                    },
+                    fontFamily: {
+                        'xp': ['Tahoma', 'Arial', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .xp-border {
+                border: 2px solid;
+                border-color: white #808080 #808080 white;
+            }
+            .xp-border-inverse {
+                border: 2px solid;
+                border-color: #808080 white white #808080;
+            }
+            .xp-button {
+                @apply bg-xp-gray xp-border px-2 py-1 text-sm font-xp hover:bg-xp-dark-gray transition-colors duration-150;
+            }
+            .progress-bar {
+                background: linear-gradient(90deg, #000080 0%, #0000FF 50%, #008080 100%);
+            }
+            .scan-line {
+                background: linear-gradient(90deg, 
+                    rgba(255,255,255,0) 0%, 
+                    rgba(255,255,255,0.3) 50%, 
+                    rgba(255,255,255,0) 100%);
+                animation: scan 2s linear infinite;
+            }
+            @keyframes scan {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+            }
+            .pulse {
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.5; }
+                100% { opacity: 1; }
+            }
+        }
+    </style>
+</head>
+<body class="bg-xp-bg font-xp min-h-screen flex items-center justify-center p-4">
+    <!-- 主窗口 -->
+    <div id="upgrade-window" class="w-full max-w-2xl bg-xp-gray xp-border shadow-2xl">
+        <!-- 窗口标题栏 -->
+        <div class="bg-xp-blue text-xp-text p-1 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-windows"></i>
+                <h1 class="font-bold">Windows XP 安装程序</h1>
+            </div>
+            <div class="flex space-x-1">
+                <button class="xp-border-inverse px-2 text-xs">_</button>
+                <button class="xp-border-inverse px-2 text-xs">□</button>
+                <button class="xp-border-inverse px-2 text-xs">×</button>
+            </div>
+        </div>
+        
+        <!-- 窗口内容 -->
+        <div class="p-4">
+            <!-- 安装步骤指示器 -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="xp-border-inverse bg-white px-3 py-1 text-center w-1/4">
+                    <p class="text-xs text-xp-dark-gray">收集信息</p>
+                </div>
+                <div class="xp-border-inverse bg-white px-3 py-1 text-center w-1/4">
+                    <p class="text-xs text-xp-dark-gray">动态更新</p>
+                </div>
+                <div class="xp-border-inverse bg-xp-blue px-3 py-1 text-center w-1/4">
+                    <p class="text-xs text-white font-bold">安装Windows</p>
+                </div>
+                <div class="xp-border-inverse bg-white px-3 py-1 text-center w-1/4">
+                    <p class="text-xs text-xp-dark-gray">完成安装</p>
+                </div>
+            </div>
+            
+            <!-- 安装图标和信息 -->
+            <div class="flex items-start space-x-4 mb-6">
+                <div class="xp-border bg-white p-3">
+                    <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/1e3fba6d2ef94a2aaefbbbed1f8350e3.png~tplv-a9rns2rl98-24:720:720.png?rk3s=1fb89129&x-expires=1757410301&x-signature=aeSPY6cRhfegddF0oPoTwdHQfOI%3D" 
+                         alt="Windows XP 标志" 
+                         class="w-16 h-16 object-contain">
+                </div>
+                
+                <div>
+                    <h2 class="text-lg font-bold mb-2">正在安装Windows XP</h2>
+                    <p class="text-sm mb-1">请稍候，Windows正在完成安装...</p>
+                    <p id="status-message" class="text-sm">正在复制文件... 34% 完成</p>
+                </div>
+            </div>
+            
+            <!-- 进度条 -->
+            <div class="xp-border-inverse bg-white p-2 mb-4">
+                <div class="h-6 overflow-hidden relative">
+                    <div id="progress-bar" class="progress-bar h-full w-[34%] relative">
+                        <div class="scan-line absolute inset-0 h-full"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 预计时间和详细信息 -->
+            <div class="flex justify-between text-sm mb-6">
+                <div>
+                    <p>预计剩余时间: <span id="time-remaining">28 分钟</span></p>
+                </div>
+                <div>
+                    <button class="xp-button text-xs">
+                        <i class="fa fa-info-circle mr-1"></i>详细信息
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 详细进度列表 -->
+            <div class="xp-border-inverse bg-white p-2 h-32 overflow-y-auto text-xs mb-4">
+                <ul id="progress-details" class="space-y-1">
+                    <li>复制文件: setupapi.dll 已完成</li>
+                    <li>复制文件: user32.dll 已完成</li>
+                    <li>复制文件: kernel32.dll 已完成</li>
+                    <li>复制文件: gdi32.dll 正在进行中...</li>
+                    <li>安装设备: 标准PCI-to-PCI桥 已完成</li>
+                    <li>安装设备: 通用串行总线控制器 已完成</li>
+                </ul>
+            </div>
+            
+            <!-- 底部按钮 -->
+            <div class="flex justify-end space-x-2">
+                <button class="xp-button" disabled>
+                    <i class="fa fa-arrow-left mr-1"></i>上一步
+                </button>
+                <button class="xp-button" disabled>
+                    <i class="fa fa-pause mr-1"></i>暂停
+                </button>
+                <button class="xp-button">
+                    <i class="fa fa-laptop mr-1"></i>最小化
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 系统托盘 -->
+    <div class="fixed bottom-0 left-0 right-0 bg-xp-gray xp-border-t border-l border-r border-t-xp-dark-gray border-l-xp-dark-gray border-r-xp-dark-gray p-1 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <button class="xp-button text-xs flex items-center">
+                <i class="fa fa-windows mr-1"></i>开始
+            </button>
+        </div>
+        
+        <div class="text-xs">
+            <span id="system-time">14:30</span>
+        </div>
+    </div>
+
+    <script>
+        // 进度条动画
+        let progress = 34;
+        const progressBar = document.getElementById('progress-bar');
+        const statusMessage = document.getElementById('status-message');
+        const timeRemaining = document.getElementById('time-remaining');
+        const progressDetails = document.getElementById('progress-details');
+        const systemTime = document.getElementById('system-time');
+        
+        // 模拟安装进度
+        const updates = [
+            "复制文件: shell32.dll 已完成",
+            "安装设备: 网络适配器 已完成",
+            "复制文件: advapi32.dll 已完成",
+            "注册组件: Windows Installer 已完成",
+            "安装设备: 显示适配器 已完成",
+            "复制文件: comctl32.dll 正在进行中...",
+            "配置网络: 本地连接 已完成",
+            "复制文件: msvcrt.dll 已完成",
+            "安装更新: KB890830 已完成",
+            "复制文件: wininet.dll 已完成",
+            "注册组件: Windows Media Player 已完成",
+            "安装设备: 音频设备 已完成",
+            "复制文件: ole32.dll 正在进行中...",
+            "配置系统: 区域设置 已完成",
+            "复制文件: rpcrt4.dll 已完成",
+            "安装更新: KB958644 已完成",
+            "准备完成安装...",
+            "安装即将完成，准备重启..."
+        ];
+        
+        let updateIndex = 0;
+        
+        // 更新系统时间
+        function updateTime() {
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            
+            hours = hours < 10 ? '0' + hours : hours;
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            
+            systemTime.textContent = `${hours}:${minutes}`;
+        }
+        
+        // 初始更新时间
+        updateTime();
+        // 每分钟更新一次时间
+        setInterval(updateTime, 60000);
+        
+        // 模拟安装过程
+        const interval = setInterval(() => {
+            progress += Math.random() * 2;
+            
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                statusMessage.textContent = "安装完成，准备重启...";
+                timeRemaining.textContent = "0 分钟";
+                
+                // 添加完成消息
+                const finalMessage = document.createElement('li');
+                finalMessage.textContent = "安装已完成，计算机将在10秒后重启";
+                finalMessage.className = "font-bold pulse";
+                progressDetails.appendChild(finalMessage);
+                
+                // 滚动到底部
+                progressDetails.scrollTop = progressDetails.scrollHeight;
+                return;
+            }
+            
+            // 更新进度条
+            progressBar.style.width = `${progress}%`;
+            
+            // 更新状态消息
+            if (progress < 50) {
+                statusMessage.textContent = `正在复制文件... ${Math.round(progress)}% 完成`;
+            } else if (progress < 80) {
+                statusMessage.textContent = `正在安装组件... ${Math.round(progress)}% 完成`;
+            } else {
+                statusMessage.textContent = `正在配置系统... ${Math.round(progress)}% 完成`;
+            }
+            
+            // 更新剩余时间
+            const remaining = Math.round((100 - progress) * 0.5);
+            timeRemaining.textContent = `${remaining} 分钟`;
+            
+            // 添加更新详情
+            if (Math.random() > 0.7 && updateIndex < updates.length) {
+                const newItem = document.createElement('li');
+                newItem.textContent = updates[updateIndex];
+                progressDetails.appendChild(newItem);
+                updateIndex++;
+                
+                // 移除最旧的项目，保持列表长度
+                if (progressDetails.children.length > 8) {
+                    progressDetails.removeChild(progressDetails.firstChild);
+                }
+                
+                // 滚动到底部
+                progressDetails.scrollTop = progressDetails.scrollHeight;
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
