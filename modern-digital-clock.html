@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>现代24小时制数字时钟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 配置Tailwind自定义颜色和字体 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#8B5CF6',
+                        dark: '#0F172A',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        digital: ['Orbitron', 'Rajdhani', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow-glow {
+                text-shadow: 0 0 10px currentColor, 0 0 20px currentColor/70;
+            }
+            .digital-transition {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .bg-grid {
+                background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+            .digit-container {
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+            }
+            .cursor-hidden {
+                cursor: none;
+            }
+        }
+    </style>
+    
+    <!-- 导入数字风格字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-dark flex items-center justify-center p-4 text-light overflow-hidden bg-grid cursor-hidden">
+    <!-- 背景动态效果 -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div id="bg-particles"></div>
+    </div>
+    
+    <!-- 时钟容器 -->
+    <div class="relative w-full max-w-5xl z-10">
+        <!-- 装饰光晕效果 -->
+        <div class="absolute -top-20 -left-20 w-40 h-40 rounded-full bg-primary/10 blur-3xl animate-pulse"></div>
+        <div class="absolute -bottom-20 -right-20 w-40 h-40 rounded-full bg-accent/10 blur-3xl animate-pulse" style="animation-delay: 1.5s"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 rounded-full bg-secondary/5 blur-3xl"></div>
+        
+        <!-- 时钟卡片 -->
+        <div class="relative bg-dark/50 backdrop-blur-lg rounded-2xl p-6 md:p-10 shadow-2xl border border-white/10 transition-all duration-300 hover:border-white/20" id="clock-card">
+            <!-- 标题 -->
+            <div class="text-center mb-6 md:mb-8">
+                <p class="text-gray-400 mt-2 text-sm md:text-base" id="date-display">2023年1月1日 星期日</p>
+            </div>
+            
+            <!-- 时钟显示 -->
+            <div class="flex justify-center items-center gap-2 md:gap-4 lg:gap-8 flex-wrap">
+                <!-- 小时 -->
+                <div class="flex flex-col items-center">
+                    <div class="digit-container w-[clamp(50px,12vw,140px)] h-[clamp(70px,18vw,180px)] rounded-xl bg-white/5 flex items-center justify-center border border-primary/30 shadow-[0_0_20px_rgba(59,130,246,0.15)] transition-all duration-300 hover:shadow-[0_0_25px_rgba(59,130,246,0.25)]">
+                        <span id="hours" class="text-[clamp(2rem,7vw,5rem)] font-digital font-bold text-primary text-shadow-glow digital-transition">00</span>
+                    </div>
+                    <span class="mt-2 text-xs md:text-sm text-gray-400">时</span>
+                </div>
+                
+                <!-- 分隔符 - 动态冒号 -->
+                <div class="hidden md:flex flex-col items-center justify-center gap-1 md:gap-2">
+                    <div class="w-2 h-2 md:w-4 md:h-4 rounded-full bg-primary/70 animate-pulse"></div>
+                    <div class="w-2 h-2 md:w-4 md:h-4 rounded-full bg-primary/70 animate-pulse" style="animation-delay: 0.5s"></div>
+                </div>
+                
+                <!-- 分钟 -->
+                <div class="flex flex-col items-center">
+                    <div class="digit-container w-[clamp(50px,12vw,140px)] h-[clamp(70px,18vw,180px)] rounded-xl bg-white/5 flex items-center justify-center border border-primary/30 shadow-[0_0_20px_rgba(59,130,246,0.15)] transition-all duration-300 hover:shadow-[0_0_25px_rgba(59,130,246,0.25)]">
+                        <span id="minutes" class="text-[clamp(2rem,7vw,5rem)] font-digital font-bold text-primary text-shadow-glow digital-transition">00</span>
+                    </div>
+                    <span class="mt-2 text-xs md:text-sm text-gray-400">分</span>
+                </div>
+                
+                <!-- 分隔符 - 动态冒号 -->
+                <div class="hidden md:flex flex-col items-center justify-center gap-1 md:gap-2">
+                    <div class="w-2 h-2 md:w-4 md:h-4 rounded-full bg-primary/70 animate-pulse"></div>
+                    <div class="w-2 h-2 md:w-4 md:h-4 rounded-full bg-primary/70 animate-pulse" style="animation-delay: 0.5s"></div>
+                </div>
+                
+                <!-- 秒钟 -->
+                <div class="flex flex-col items-center">
+                    <div class="digit-container w-[clamp(50px,12vw,140px)] h-[clamp(70px,18vw,180px)] rounded-xl bg-white/5 flex items-center justify-center border border-accent/30 shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all duration-300 hover:shadow-[0_0_25px_rgba(139,92,246,0.25)]">
+                        <span id="seconds" class="text-[clamp(2rem,7vw,5rem)] font-digital font-bold text-accent text-shadow-glow digital-transition">00</span>
+                    </div>
+                    <span class="mt-2 text-xs md:text-sm text-gray-400">秒</span>
+                </div>
+            </div>
+            
+            <!-- 底部信息 -->
+            <div class="mt-8 text-center text-xs text-gray-500">
+                <p id="timezone-info">UTC+8 中国标准时间</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM元素获取
+        const hoursElement = document.getElementById('hours');
+        const minutesElement = document.getElementById('minutes');
+        const secondsElement = document.getElementById('seconds');
+        const dateDisplay = document.getElementById('date-display');
+        const clockCard = document.getElementById('clock-card');
+        const timezoneInfo = document.getElementById('timezone-info');
+        const bgParticles = document.getElementById('bg-particles');
+        
+        // 星期几中文映射
+        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        
+        // 主题颜色配置
+        const themes = [
+            { name: '蓝色主题', primary: 'text-primary', secondary: 'text-secondary', accent: 'text-accent', borderPrimary: 'border-primary/30', borderAccent: 'border-accent/30' },
+            { name: '红色主题', primary: 'text-red-400', secondary: 'text-rose-400', accent: 'text-pink-400', borderPrimary: 'border-red-400/30', borderAccent: 'border-pink-400/30' },
+            { name: '绿色主题', primary: 'text-green-400', secondary: 'text-emerald-400', accent: 'text-teal-400', borderPrimary: 'border-green-400/30', borderAccent: 'border-teal-400/30' },
+            { name: '紫色主题', primary: 'text-violet-400', secondary: 'text-fuchsia-400', accent: 'text-purple-400', borderPrimary: 'border-violet-400/30', borderAccent: 'border-purple-400/30' },
+            { name: '黄色主题', primary: 'text-yellow-400', secondary: 'text-amber-400', accent: 'text-orange-400', borderPrimary: 'border-yellow-400/30', borderAccent: 'border-orange-400/30' }
+        ];
+        
+        let currentTheme = 0;
+        
+        // 创建背景粒子效果
+        function createBackgroundParticles() {
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                const size = Math.random() * 4 + 1;
+                const opacity = Math.random() * 0.3 + 0.05;
+                const duration = Math.random() * 20 + 10;
+                const delay = Math.random() * 5;
+                
+                particle.style.position = 'absolute';
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.background = 'white';
+                particle.style.borderRadius = '50%';
+                particle.style.opacity = opacity;
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                particle.style.animation = `float ${duration}s linear ${delay}s infinite`;
+                particle.style.zIndex = '0';
+                
+                bgParticles.appendChild(particle);
+            }
+        }
+        
+        // 添加浮动动画样式
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = `
+            @keyframes float {
+                0% { transform: translateY(0) translateX(0); }
+                25% { transform: translateY(-${Math.random() * 50 + 50}px) translateX(${Math.random() * 50 - 25}px); }
+                50% { transform: translateY(-${Math.random() * 50 + 100}px) translateX(${Math.random() * 50 - 25}px); }
+                75% { transform: translateY(-${Math.random() * 50 + 50}px) translateX(${Math.random() * 50 - 25}px); }
+                100% { transform: translateY(0) translateX(0); }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+        
+        // 更新时钟函数 - 24小时制
+        function updateClock() {
+            const now = new Date();
+            
+            // 获取24小时制的时间组件
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            let seconds = now.getSeconds();
+            
+            // 格式化数字为两位数
+            hours = String(hours).padStart(2, '0');
+            minutes = String(minutes).padStart(2, '0');
+            seconds = String(seconds).padStart(2, '0');
+            
+            // 数字变化时添加动画效果
+            if (hoursElement.textContent !== hours) {
+                hoursElement.textContent = hours;
+                hoursElement.classList.add('scale-110');
+                setTimeout(() => hoursElement.classList.remove('scale-110'), 300);
+            }
+            
+            if (minutesElement.textContent !== minutes) {
+                minutesElement.textContent = minutes;
+                minutesElement.classList.add('scale-110');
+                setTimeout(() => minutesElement.classList.remove('scale-110'), 300);
+            }
+            
+            if (secondsElement.textContent !== seconds) {
+                secondsElement.textContent = seconds;
+                secondsElement.classList.add('scale-110');
+                setTimeout(() => secondsElement.classList.remove('scale-110'), 300);
+            }
+            
+            // 更新日期显示
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从0开始
+            const day = String(now.getDate()).padStart(2, '0');
+            const weekday = weekdays[now.getDay()];
+            
+            dateDisplay.textContent = `${year}年${month}月${day}日 ${weekday}`;
+        }
+        
+        // 切换主题函数
+        function switchTheme() {
+            // 移除当前主题类
+            hoursElement.classList.remove(themes[currentTheme].primary);
+            minutesElement.classList.remove(themes[currentTheme].primary);
+            secondsElement.classList.remove(themes[currentTheme].accent);
+            
+            const digitContainers = document.querySelectorAll('.digit-container');
+            digitContainers[0].classList.remove(themes[currentTheme].borderPrimary);
+            digitContainers[1].classList.remove(themes[currentTheme].borderPrimary);
+            digitContainers[2].classList.remove(themes[currentTheme].borderAccent);
+            
+            // 切换到下一个主题
+            currentTheme = (currentTheme + 1) % themes.length;
+            
+            // 添加新主题类
+            hoursElement.classList.add(themes[currentTheme].primary);
+            minutesElement.classList.add(themes[currentTheme].primary);
+            secondsElement.classList.add(themes[currentTheme].accent);
+            
+            digitContainers[0].classList.add(themes[currentTheme].borderPrimary);
+            digitContainers[1].classList.add(themes[currentTheme].borderPrimary);
+            digitContainers[2].classList.add(themes[currentTheme].borderAccent);
+            
+            // 添加切换动画
+            clockCard.classList.add('scale-105');
+            setTimeout(() => clockCard.classList.remove('scale-105'), 300);
+        }
+        
+        // 添加事件监听
+        clockCard.addEventListener('click', () => {
+            switchTheme();
+        });
+        
+        // 初始化
+        function init() {
+            createBackgroundParticles();
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
