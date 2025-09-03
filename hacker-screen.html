@@ -129,6 +129,131 @@
                 background-color: var(--dot-color, #00FF41);
                 box-shadow: 0 0 8px var(--dot-color, #00FF41);
             }
+            
+            .map-node {
+                position: absolute;
+                transform-origin: center;
+            }
+            
+            .node-center {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background-color: currentColor;
+                position: relative;
+                z-index: 2;
+            }
+            
+            .node-ring {
+                position: absolute;
+                top: -10px;
+                left: -10px;
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                background-color: transparent;
+                border: 2px solid currentColor;
+                opacity: 0;
+                transform: scale(0.3);
+                z-index: 1;
+                animation: expand-ring 3s infinite;
+            }
+            
+            .connection-line {
+                position: absolute;
+                background: linear-gradient(90deg, transparent, currentColor, transparent);
+                height: 1px;
+                opacity: 0.3;
+                transform-origin: left center;
+                animation: pulse-line 4s infinite;
+            }
+            
+            .map-grid {
+                background-image: linear-gradient(rgba(0, 255, 65, 0.1) 1px, transparent 1px), 
+                                  linear-gradient(90deg, rgba(0, 255, 65, 0.1) 1px, transparent 1px);
+                background-size: 20px 20px;
+                animation: grid-move 20s linear infinite;
+            }
+            
+            .map-contour {
+                background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAwIDUwMCIgZmlsbD0iIzAwODAwMCI+PGNpcmNsZSBjeD0iNTAwIiBjeT0iMjUwIiByPSI0MDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwODAwMCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9zdmc+');
+                background-size: contain;
+                background-position: center;
+                background-repeat: no-repeat;
+                animation: contour-glow 5s infinite alternate;
+            }
+            
+            .map-scanline {
+                background: linear-gradient(to bottom, 
+                    rgba(0, 0, 0, 0) 0%, 
+                    rgba(0, 255, 65, 0.1) 50%, 
+                    rgba(0, 0, 0, 0) 100%);
+                background-size: 100% 4px;
+                animation: map-scanline-move 8s linear infinite;
+                pointer-events: none;
+            }
+            
+            .data-flow {
+                white-space: nowrap;
+                animation: data-scroll 15s linear infinite;
+                pointer-events: none;
+            }
+            
+            .shadow-glow-green {
+                box-shadow: 0 0 20px 5px rgba(0, 255, 65, 0.2);
+            }
+            
+            .shadow-glow-blue {
+                box-shadow: 0 0 20px 5px rgba(0, 255, 255, 0.2);
+            }
+            
+            .shadow-glow-red {
+                box-shadow: 0 0 20px 5px rgba(255, 0, 0, 0.2);
+            }
+            
+            @keyframes pulse-node {
+                0%, 100% { opacity: 0.8; }
+                50% { opacity: 1; }
+            }
+            
+            @keyframes expand-ring {
+                0% { transform: scale(0.3); opacity: 0.8; }
+                100% { transform: scale(1.5); opacity: 0; }
+            }
+            
+            @keyframes pulse-line {
+                0%, 100% { opacity: 0.1; }
+                50% { opacity: 0.4; }
+            }
+            
+            @keyframes grid-move {
+                0% { background-position: 0 0; }
+                100% { background-position: 40px 40px; }
+            }
+            
+            @keyframes contour-glow {
+                0% { opacity: 0.1; }
+                100% { opacity: 0.3; }
+            }
+            
+            @keyframes map-scanline-move {
+                0% { transform: translateY(-100%); }
+                100% { transform: translateY(1000%); }
+            }
+            
+            @keyframes data-scroll {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+            }
+            
+            @keyframes fade {
+                0%, 100% { opacity: 0.2; }
+                50% { opacity: 0.4; }
+            }
+            
+            .animate-fade {
+                animation: fade 4s ease-in-out infinite;
+            }
             .progress-bar-bg {
                 background: linear-gradient(90deg, rgba(0, 255, 65, 0.1) 0%, rgba(0, 255, 65, 0.2) 100%);
             }
@@ -537,27 +662,155 @@
             scanResults.innerHTML = results.join('\n');
         }
         
-        // 更新地理位置追踪
-        function updateGeoTracker() {
-            // 清除现有地图点
+        // 创建地图节点
+        function createMapNodes() {
+            // 清空现有节点
             miniMap.innerHTML = '';
             
-            // 添加新的地图点
-            const numPoints = Math.floor(Math.random() * 5) + 3;
-            const colors = ['#00FF41', '#00FFFF', '#FF3A3A', '#FFFF00', '#9900FF'];
+            // 添加动态网格背景
+            const gridBg = document.createElement('div');
+            gridBg.className = 'absolute inset-0 map-grid';
+            miniMap.appendChild(gridBg);
             
-            for (let i = 0; i < numPoints; i++) {
-                const dot = document.createElement('div');
-                dot.className = 'map-dot';
-                dot.style.left = `${20 + Math.random() * 60}%`;
-                dot.style.top = `${20 + Math.random() * 60}%`;
-                dot.style.setProperty('--dot-color', colors[Math.floor(Math.random() * colors.length)]);
+            // 添加世界地图轮廓
+            const mapContour = document.createElement('div');
+            mapContour.className = 'absolute inset-0 opacity-20 map-contour';
+            miniMap.appendChild(mapContour);
+            
+            // 添加区域覆盖层 - 不同颜色的区域
+            const region1 = document.createElement('div');
+            region1.className = 'absolute top-[10%] left-[15%] w-[25%] h-[30%] bg-hacker-green/10 rounded-lg blur-sm shadow-glow-green animate-fade';
+            miniMap.appendChild(region1);
+            
+            const region2 = document.createElement('div');
+            region2.className = 'absolute top-[50%] left-[55%] w-[30%] h-[25%] bg-hacker-blue/10 rounded-lg blur-sm shadow-glow-blue animate-fade';
+            region2.style.animationDelay = '1s';
+            miniMap.appendChild(region2);
+            
+            const region3 = document.createElement('div');
+            region3.className = 'absolute top-[20%] left-[65%] w-[20%] h-[20%] bg-hacker-red/10 rounded-lg blur-sm shadow-glow-red animate-fade';
+            region3.style.animationDelay = '2s';
+            miniMap.appendChild(region3);
+            
+            // 创建连接线容器
+            const connectionContainer = document.createElement('div');
+            connectionContainer.className = 'absolute inset-0';
+            miniMap.appendChild(connectionContainer);
+            
+            // 创建节点容器
+            const nodeContainer = document.createElement('div');
+            miniMap.appendChild(nodeContainer);
+            
+            // 创建节点
+            const colors = ['#00FF41', '#00FFFF', '#FF3A3A', '#FFFF00', '#9900FF'];
+            const nodeCount = 12;
+            const nodes = [];
+            
+            // 创建节点
+            for (let i = 0; i < nodeCount; i++) {
+                const node = document.createElement('div');
+                node.className = 'map-node';
                 
-                // 添加脉冲效果
-                dot.style.animation = `ping-slow ${2 + Math.random() * 3}s cubic-bezier(0, 0, 0.2, 1) infinite`;
+                // 随机位置，但分布均匀
+                const angle = (i / nodeCount) * Math.PI * 2;
+                const radius = 35 + Math.random() * 10; // 随机半径，让节点分布不完全在一个圆上
+                const x = 50 + radius * Math.cos(angle);
+                const y = 50 + radius * Math.sin(angle);
                 
-                miniMap.appendChild(dot);
+                node.style.left = `${x}%`;
+                node.style.top = `${y}%`;
+                
+                // 随机颜色
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                node.style.color = color;
+                
+                // 添加中心圆点
+                const center = document.createElement('div');
+                center.className = 'node-center';
+                node.appendChild(center);
+                
+                // 添加扩散环
+                const ring = document.createElement('div');
+                ring.className = 'node-ring';
+                node.appendChild(ring);
+                
+                // 添加数据标签
+                const label = document.createElement('div');
+                label.className = 'text-[8px] mt-4 whitespace-nowrap';
+                label.textContent = `NODE-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+                label.style.textAlign = 'center';
+                node.appendChild(label);
+                
+                nodeContainer.appendChild(node);
+                
+                // 存储节点信息
+                nodes.push({ element: node, x, y, color });
+                
+                // 设置不同的动画延迟
+                node.style.animation = `pulse-node 2s infinite`;
+                node.style.animationDelay = `${Math.random() * 2}s`;
+                ring.style.animationDelay = `${Math.random() * 3}s`;
             }
+            
+            // 创建随机连接线
+            createConnectionLines(nodes, connectionContainer);
+            
+            // 添加扫描线效果
+            const scanline = document.createElement('div');
+            scanline.className = 'absolute inset-0 map-scanline';
+            miniMap.appendChild(scanline);
+            
+            // 添加数据流效果
+            const dataFlow = document.createElement('div');
+            dataFlow.className = 'absolute top-0 left-0 w-full text-[8px] text-hacker-green/30 opacity-30 data-flow';
+            dataFlow.textContent = '01010101 11010101 01110101 10101010 01010101 11010101 01110101 10101010';
+            miniMap.appendChild(dataFlow);
+        }
+        
+        // 创建连接线
+        function createConnectionLines(nodes, container) {
+            // 为每个节点连接到2-4个其他节点
+            nodes.forEach((node, index) => {
+                const connectionCount = Math.floor(Math.random() * 3) + 2;
+                const connectedIndexes = new Set();
+                
+                // 确保连接不同的节点
+                while (connectedIndexes.size < connectionCount) {
+                    let targetIndex = Math.floor(Math.random() * nodes.length);
+                    if (targetIndex !== index) {
+                        connectedIndexes.add(targetIndex);
+                    }
+                }
+                
+                // 创建连接线
+                connectedIndexes.forEach(targetIndex => {
+                    const targetNode = nodes[targetIndex];
+                    
+                    // 计算线条的长度和角度
+                    const dx = targetNode.x - node.x;
+                    const dy = targetNode.y - node.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    
+                    // 创建线条元素
+                    const line = document.createElement('div');
+                    line.className = 'connection-line';
+                    line.style.width = `${length * 2}%`; // 缩放因子
+                    line.style.left = `${node.x}%`;
+                    line.style.top = `${node.y}%`;
+                    line.style.transform = `rotate(${angle}deg)`;
+                    line.style.color = node.color;
+                    line.style.animationDelay = `${Math.random() * 2}s`;
+                    
+                    container.appendChild(line);
+                });
+            });
+        }
+        
+        // 更新地理位置追踪
+        function updateGeoTracker() {
+            // 创建复杂的地图节点和连接
+            createMapNodes();
             
             // 更新坐标
             const lat = (Math.random() * 180 - 90).toFixed(6);
