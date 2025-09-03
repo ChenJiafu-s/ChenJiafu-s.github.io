@@ -25,6 +25,12 @@
         }
     </script>
     <style type="text/tailwindcss">
+        body {
+            margin: 0;
+            height: 100vh;
+            cursor: none; /* 全局隐藏鼠标指针 */
+            overflow: hidden;
+        }
         @layer utilities {
             .matrix-rain {
                 background-color: theme('colors.matrix.black');
