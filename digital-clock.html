@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字时钟动画</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- 配置Tailwind自定义颜色和字体 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#8B5CF6',
+                        dark: '#1E293B',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        digital: ['Orbitron', 'sans-serif', 'system-ui'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
+            }
+            .text-shadow-lg {
+                text-shadow: 0 0 15px rgba(59, 130, 246, 0.9), 0 0 30px rgba(59, 130, 246, 0.5);
+            }
+            .clock-gradient {
+                background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            }
+            .digit-transition {
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+        }
+    </style>
+    
+    <!-- 导入数字风格字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen clock-gradient flex items-center justify-center p-4 text-light overflow-hidden">
+    <!-- 时钟容器 -->
+    <div class="relative w-full max-w-4xl">
+        <!-- 装饰元素 -->
+        <div class="absolute -top-10 -left-10 w-20 h-20 rounded-full bg-primary/20 blur-2xl animate-pulse"></div>
+        <div class="absolute -bottom-10 -right-10 w-20 h-20 rounded-full bg-accent/20 blur-2xl animate-pulse" style="animation-delay: 1s"></div>
+        
+        <!-- 时钟卡片 -->
+        <div class="relative bg-dark/60 backdrop-blur-lg rounded-2xl p-6 md:p-10 shadow-2xl border border-white/10">
+            <!-- 标题 -->
+            <div class="text-center mb-6 md:mb-10">
+                <p class="text-gray-400 mt-2 text-sm md:text-base" id="dateDisplay">2023年1月1日 星期日</p>
+            </div>
+            
+            <!-- 时钟显示 -->
+            <div class="flex justify-center items-center gap-2 md:gap-6">
+                <!-- 小时 -->
+                <div class="flex flex-col items-center">
+                    <div class="clock-digit w-[clamp(60px,15vw,150px)] h-[clamp(80px,20vw,200px)] rounded-xl bg-dark/80 flex items-center justify-center border border-primary/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                        <span id="hours" class="text-[clamp(2.5rem,8vw,6rem)] font-digital font-bold text-primary text-shadow-lg digit-transition">00</span>
+                    </div>
+                    <span class="mt-3 text-sm text-gray-400">小时</span>
+                </div>
+                
+                <!-- 分隔符 -->
+                <div class="flex flex-col items-center justify-center gap-2">
+                    <div class="w-3 h-3 md:w-6 md:h-6 rounded-full bg-primary/70 animate-pulse"></div>
+                    <div class="w-3 h-3 md:w-6 md:h-6 rounded-full bg-primary/70 animate-pulse" style="animation-delay: 0.5s"></div>
+                </div>
+                
+                <!-- 分钟 -->
+                <div class="flex flex-col items-center">
+                    <div class="clock-digit w-[clamp(60px,15vw,150px)] h-[clamp(80px,20vw,200px)] rounded-xl bg-dark/80 flex items-center justify-center border border-primary/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                        <span id="minutes" class="text-[clamp(2.5rem,8vw,6rem)] font-digital font-bold text-primary text-shadow-lg digit-transition">00</span>
+                    </div>
+                    <span class="mt-3 text-sm text-gray-400">分钟</span>
+                </div>
+                
+                <!-- 分隔符 -->
+                <div class="flex flex-col items-center justify-center gap-2">
+                    <div class="w-3 h-3 md:w-6 md:h-6 rounded-full bg-primary/70 animate-pulse"></div>
+                    <div class="w-3 h-3 md:w-6 md:h-6 rounded-full bg-primary/70 animate-pulse" style="animation-delay: 0.5s"></div>
+                </div>
+                
+                <!-- 秒钟 -->
+                <div class="flex flex-col items-center">
+                    <div class="clock-digit w-[clamp(60px,15vw,150px)] h-[clamp(80px,20vw,200px)] rounded-xl bg-dark/80 flex items-center justify-center border border-accent/30 shadow-[0_0_15px_rgba(139,92,246,0.2)]">
+                        <span id="seconds" class="text-[clamp(2.5rem,8vw,6rem)] font-digital font-bold text-accent text-shadow-lg digit-transition">00</span>
+                    </div>
+                    <span class="mt-3 text-sm text-gray-400">秒钟</span>
+                </div>
+                
+                <!-- 上午/下午 -->
+                <div class="hidden md:flex flex-col items-center justify-center">
+                    <div class="w-[clamp(40px,8vw,80px)] h-[clamp(40px,10vw,100px)] rounded-xl bg-dark/80 flex items-center justify-center border border-secondary/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                        <span id="period" class="text-[clamp(1.2rem,4vw,2rem)] font-digital font-bold text-secondary text-shadow">AM</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const hoursElement = document.getElementById('hours');
+        const minutesElement = document.getElementById('minutes');
+        const secondsElement = document.getElementById('seconds');
+        const periodElement = document.getElementById('period');
+        const dateDisplay = document.getElementById('dateDisplay');
+        
+        // 星期几中文映射
+        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        
+        // 更新时钟函数
+        function updateClock() {
+            const now = new Date();
+            
+            // 获取时间组件
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            let seconds = now.getSeconds();
+            
+            // 确定上午/下午
+            const period = hours >= 12 ? 'PM' : 'AM';
+            
+            // 转换为12小时制
+            hours = hours % 12;
+            hours = hours ? hours : 12; // 0应显示为12
+            
+            // 格式化数字为两位数
+            hours = String(hours).padStart(2, '0');
+            minutes = String(minutes).padStart(2, '0');
+            seconds = String(seconds).padStart(2, '0');
+            
+            // 检查数字是否变化，如果变化则添加动画效果
+            if (hoursElement.textContent !== hours) {
+                hoursElement.textContent = hours;
+                hoursElement.classList.add('scale-110');
+                setTimeout(() => hoursElement.classList.remove('scale-110'), 300);
+            }
+            
+            if (minutesElement.textContent !== minutes) {
+                minutesElement.textContent = minutes;
+                minutesElement.classList.add('scale-110');
+                setTimeout(() => minutesElement.classList.remove('scale-110'), 300);
+            }
+            
+            if (secondsElement.textContent !== seconds) {
+                secondsElement.textContent = seconds;
+                secondsElement.classList.add('scale-110');
+                setTimeout(() => secondsElement.classList.remove('scale-110'), 300);
+            }
+            
+            // 更新上午/下午
+            if (periodElement.textContent !== period) {
+                periodElement.textContent = period;
+                periodElement.classList.add('scale-110');
+                setTimeout(() => periodElement.classList.remove('scale-110'), 300);
+            }
+            
+            // 更新日期显示
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1; // 月份从0开始
+            const day = now.getDate();
+            const weekday = weekdays[now.getDay()];
+            
+            dateDisplay.textContent = `${year}年${month}月${day}日 ${weekday}`;
+        }
+        
+        // 初始化时钟
+        updateClock();
+        
+        // 每秒更新一次
+        setInterval(updateClock, 1000);
+        
+        // 添加一些交互效果 - 点击时钟时改变主题
+        const clockDigits = document.querySelectorAll('.clock-digit');
+        let themeIndex = 0;
+        const themes = [
+            { primary: 'text-primary', accent: 'text-accent', secondary: 'text-secondary' },
+            { primary: 'text-red-400', accent: 'text-pink-400', secondary: 'text-rose-400' },
+            { primary: 'text-yellow-400', accent: 'text-amber-400', secondary: 'text-orange-400' },
+            { primary: 'text-green-400', accent: 'text-emerald-400', secondary: 'text-teal-400' },
+            { primary: 'text-cyan-400', accent: 'text-sky-400', secondary: 'text-blue-400' },
+            { primary: 'text-purple-400', accent: 'text-violet-400', secondary: 'text-fuchsia-400' }
+        ];
+        
+        document.querySelector('.bg-dark\\/60').addEventListener('click', () => {
+            // 移除当前主题类
+            hoursElement.classList.remove(themes[themeIndex].primary);
+            minutesElement.classList.remove(themes[themeIndex].primary);
+            secondsElement.classList.remove(themes[themeIndex].accent);
+            periodElement.classList.remove(themes[themeIndex].secondary);
+            
+            // 切换到下一个主题
+            themeIndex = (themeIndex + 1) % themes.length;
+            
+            // 添加新主题类
+            hoursElement.classList.add(themes[themeIndex].primary);
+            minutesElement.classList.add(themes[themeIndex].primary);
+            secondsElement.classList.add(themes[themeIndex].accent);
+            periodElement.classList.add(themes[themeIndex].secondary);
+            
+            // 添加点击动画
+            document.querySelector('.bg-dark\\/60').classList.add('scale-105');
+            setTimeout(() => {
+                document.querySelector('.bg-dark\\/60').classList.remove('scale-105');
+            }, 300);
+        });
+    </script>
+</body>
+</html>
