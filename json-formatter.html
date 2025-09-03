@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON 格式化工具</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Font Awesome 图标 -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- Tailwind 自定义配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',    // 主色调（蓝色）
+                        secondary: '#64748b',  // 辅助色（灰色）
+                        success: '#10b981',    // 成功色（绿色）
+                        danger: '#ef4444',     // 错误色（红色）
+                        dark: '#1e293b',       // 深色模式背景
+                        'dark-card': '#273444'  // 深色模式卡片背景
+                    },
+                    fontFamily: {
+                        mono: ['Consolas', 'Monaco', 'monospace']  // 代码字体
+                    },
+                    boxShadow: {
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        'dark-card': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15)'
+                    }
+                }
+            },
+            darkMode: 'class'  // 支持类控制深色模式
+        }
+    </script>
+    
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            /* 滚动条美化 */
+            .scrollbar-slim::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            .scrollbar-slim::-webkit-scrollbar-thumb {
+                background-color: theme('colors.secondary/30');
+                border-radius: 3px;
+            }
+            .scrollbar-slim::-webkit-scrollbar-track {
+                background-color: transparent;
+            }
+            
+            /* 代码高亮颜色 */
+            .json-key { color: #f97316; }    /* 键名（橙色） */
+            .json-string { color: #10b981; } /* 字符串（绿色） */
+            .json-number { color: #8b5cf6; } /* 数字（紫色） */
+            .json-boolean { color: #3b82f6; }/* 布尔值（蓝色） */
+            .json-null { color: #ef4444; }  /* null（红色） */
+            .dark .json-key { color: #fdba74; }
+            .dark .json-string { color: #34d399; }
+            .dark .json-number { color: #a78bfa; }
+            .dark .json-boolean { color: #60a5fa; }
+            .dark .json-null { color: #fca5a5; }
+        }
+    </style>
+    
+    <style>
+        /* 基础样式 */
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        textarea:focus, button:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px theme('colors.primary/30');
+        }
+        /* 动画效果 */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* 复制成功提示动画 */
+        .copy-toast {
+            animation: toastShow 2s ease-in-out;
+        }
+        @keyframes toastShow {
+            0% { opacity: 0; transform: translateY(-10px); }
+            10% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 dark:bg-dark dark:text-gray-100 min-h-screen flex flex-col">
+    <!-- 顶部导航 -->
+    <header class="bg-white dark:bg-dark-card shadow-sm py-4 px-6 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold text-primary flex items-center">
+                <i class="fa fa-code mr-2"></i>
+                JSON 格式化工具
+            </h1>
+            <!-- 主题切换按钮 -->
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-dark transition-colors">
+                <i class="fa fa-moon-o dark:hidden"></i>
+                <i class="fa fa-sun-o hidden dark:inline-block"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 输入区域 -->
+            <div class="bg-white dark:bg-dark-card rounded-lg shadow-card dark:shadow-dark-card p-4 fade-in" style="animation-delay: 0.1s">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-semibold text-secondary flex items-center">
+                        <i class="fa fa-pencil mr-2"></i>
+                        JSON 输入
+                    </h2>
+                    <div class="flex gap-2">
+                        <!-- 清空按钮 -->
+                        <button id="clear-input" class="p-1.5 text-secondary hover:text-danger transition-colors" title="清空输入">
+                            <i class="fa fa-trash-o"></i>
+                        </button>
+                        <!-- 示例按钮 -->
+                        <button id="load-example" class="p-1.5 text-secondary hover:text-primary transition-colors" title="加载示例 JSON">
+                            <i class="fa fa-file-text-o"></i>
+                        </button>
+                    </div>
+                </div>
+                <!-- 错误提示 -->
+                <div id="error-alert" class="hidden bg-danger/10 dark:bg-danger/20 text-danger text-sm px-3 py-2 rounded mb-3">
+                    <i class="fa fa-exclamation-circle mr-1"></i>
+                    <span id="error-message">JSON 格式错误，请检查语法</span>
+                </div>
+                <!-- 输入文本域 -->
+                <textarea 
+                    id="json-input" 
+                    class="w-full h-[300px] md:h-[400px] p-3 rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-dark font-mono text-sm scrollbar-slim resize-none"
+                    placeholder="请输入 JSON 内容..."></textarea>
+            </div>
+
+            <!-- 输出区域 -->
+            <div class="bg-white dark:bg-dark-card rounded-lg shadow-card dark:shadow-dark-card p-4 fade-in" style="animation-delay: 0.2s">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-semibold text-secondary flex items-center">
+                        <i class="fa fa-eye mr-2"></i>
+                        格式化结果
+                    </h2>
+                    <!-- 复制按钮 -->
+                    <button id="copy-output" class="p-1.5 text-secondary hover:text-success transition-colors" title="复制结果">
+                        <i class="fa fa-copy"></i>
+                    </button>
+                </div>
+                <!-- 复制成功提示 -->
+                <div id="copy-toast" class="hidden fixed top-20 right-1/2 transform -translate-x-1/2 bg-success/90 text-white px-4 py-2 rounded-lg copy-toast z-50">
+                    <i class="fa fa-check mr-1"></i> 复制成功！
+                </div>
+                <!-- 格式化选项 -->
+                <div class="flex flex-wrap gap-2 mb-3 text-sm">
+                    <label class="flex items-center">
+                        <span class="mr-1">缩进：</span>
+                        <select id="indent-size" class="bg-gray-100 dark:bg-dark border border-gray-200 dark:border-gray-600 rounded px-2 py-1 text-sm">
+                            <option value="2">2 空格</option>
+                            <option value="4" selected>4 空格</option>
+                            <option value="tab">Tab</option>
+                        </select>
+                    </label>
+                    <label class="flex items-center ml-4">
+                        <input type="checkbox" id="show-comments" class="mr-1">
+                        <span>显示注释</span>
+                    </label>
+                </div>
+                <!-- 输出展示区 -->
+                <div id="json-output" class="w-full h-[300px] md:h-[400px] p-3 rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-dark font-mono text-sm overflow-auto scrollbar-slim">
+                    <div class="text-center text-gray-400 dark:text-gray-500 py-10">
+                        <i class="fa fa-arrow-left text-2xl mb-2 opacity-50"></i>
+                        <p>输入 JSON 后自动格式化</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能说明 -->
+        <div class="mt-8 bg-white dark:bg-dark-card rounded-lg shadow-card dark:shadow-dark-card p-4 md:p-6 fade-in" style="animation-delay: 0.3s">
+            <h2 class="font-bold text-lg mb-3 flex items-center text-primary">
+                <i class="fa fa-info-circle mr-2"></i>
+                功能说明
+            </h2>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <li class="flex items-start">
+                    <i class="fa fa-check-circle text-success mt-0.5 mr-2"></i>
+                    <span>自动检测 JSON 语法，错误实时提示</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fa fa-check-circle text-success mt-0.5 mr-2"></i>
+                    <span>支持自定义缩进（2空格/4空格/Tab）</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fa fa-check-circle text-success mt-0.5 mr-2"></i>
+                    <span>语法高亮显示（键名/字符串/数字/布尔值）</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fa fa-check-circle text-success mt-0.5 mr-2"></i>
+                    <span>一键复制格式化结果，方便粘贴使用</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fa fa-check-circle text-success mt-0.5 mr-2"></i>
+                    <span>支持加载示例 JSON，快速体验功能</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fa fa-check-circle text-success mt-0.5 mr-2"></i>
+                    <span>深色/浅色主题切换，适配不同使用场景</span>
+                </li>
+            </ul>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white dark:bg-dark-card py-4 px-6 mt-8">
+        <div class="max-w-7xl mx-auto text-center text-sm text-gray-500 dark:text-gray-400">
+            <p>© 2024 JSON 格式化工具 | 轻量、高效、免费</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript 逻辑 -->
+    <script>
+        // 1. 主题切换功能
+        const themeToggle = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+        
+        // 初始化主题（优先读取本地存储）
+        if (localStorage.getItem('theme') === 'dark' || 
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlElement.classList.add('dark');
+        }
+        
+        // 切换主题
+        themeToggle.addEventListener('click', () => {
+            htmlElement.classList.toggle('dark');
+            localStorage.setItem('theme', htmlElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+
+        // 2. DOM 元素获取
+        const jsonInput = document.getElementById('json-input');
+        const jsonOutput = document.getElementById('json-output');
+        const errorAlert = document.getElementById('error-alert');
+        const errorMessage = document.getElementById('error-message');
+        const indentSize = document.getElementById('indent-size');
+        const showComments = document.getElementById('show-comments');
+        const clearInput = document.getElementById('clear-input');
+        const loadExample = document.getElementById('load-example');
+        const copyOutput = document.getElementById('copy-output');
+        const copyToast = document.getElementById('copy-toast');
+
+        // 3. 示例 JSON 数据
+        const exampleJSON = `{
+    "name": "JSON 格式化工具",
+    "version": "1.0.0",
+    "author": "Web 开发者",
+    "features": [
+        "语法高亮",
+        "错误提示",
+        "主题切换",
+        "复制结果"
+    ],
+    "settings": {
+        "indent": 4,
+        "showComments": false,
+        "darkMode": true
+    },
+    "isFree": true,
+    "updateTime": null
+}`;
+
+        // 4. 加载示例 JSON
+        loadExample.addEventListener('click', () => {
+            jsonInput.value = exampleJSON;
+            formatJSON(); // 加载后自动格式化
+        });
+
+        // 5. 清空输入
+        clearInput.addEventListener('click', () => {
+            jsonInput.value = '';
+            jsonOutput.innerHTML = `
+                <div class="text-center text-gray-400 dark:text-gray-500 py-10">
+                    <i class="fa fa-arrow-left text-2xl mb-2 opacity-50"></i>
+                    <p>输入 JSON 后自动格式化</p>
+                </div>
+            `;
+            errorAlert.classList.add('hidden');
+        });
+
+        // 6. 添加输入事件监听，实时格式化
+        jsonInput.addEventListener('input', debounce(formatJSON, 300));
+        indentSize.addEventListener('change', formatJSON);
+        showComments.addEventListener('change', formatJSON);
+
+        // 防抖函数，避免输入时频繁格式化
+        function debounce(func, wait) {
+            let timeout;
+            return function() {
+                const context = this;
+                const args = arguments;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), wait);
+            };
+        }
+
+        // 7. JSON 格式化核心函数
+        function formatJSON() {
+            const input = jsonInput.value.trim();
+            
+            // 输入为空时重置输出
+            if (!input) {
+                jsonOutput.innerHTML = `
+                    <div class="text-center text-gray-400 dark:text-gray-500 py-10">
+                        <i class="fa fa-arrow-left text-2xl mb-2 opacity-50"></i>
+                        <p>输入 JSON 后自动格式化</p>
+                    </div>
+                `;
+                errorAlert.classList.add('hidden');
+                return;
+            }
+
+            try {
+                // 解析 JSON（支持带注释的 JSON）
+                let parsedJSON;
+                if (showComments.checked) {
+                    // 移除单行注释（//）和多行注释（/* */）
+                    const cleanInput = input
+                        .replace(/\/\/.*$/gm, '') // 单行注释
+                        .replace(/\/\*[\s\S]*?\*\//g, ''); // 多行注释
+                    parsedJSON = JSON.parse(cleanInput);
+                } else {
+                    parsedJSON = JSON.parse(input);
+                }
+
+                // 获取缩进配置
+                let indent;
+                if (indentSize.value === 'tab') {
+                    indent = '\t';
+                } else {
+                    indent = ' '.repeat(Number(indentSize.value));
+                }
+
+                // 生成格式化后的 JSON 字符串
+                const formattedJSON = JSON.stringify(parsedJSON, null, indent);
+                // 语法高亮处理
+                const highlightedJSON = highlightJSON(formattedJSON);
+                jsonOutput.innerHTML = `<pre>${highlightedJSON}</pre>`;
+                errorAlert.classList.add('hidden');
+
+            } catch (error) {
+                // 捕获 JSON 解析错误
+                errorAlert.classList.remove('hidden');
+                errorMessage.textContent = `JSON 格式错误: ${error.message}`;
+                
+                // 显示原始输入（带错误提示）
+                jsonOutput.innerHTML = `
+                    <div class="text-danger py-10 text-center">
+                        <i class="fa fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p>请检查输入的 JSON 格式</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 8. JSON 语法高亮函数
+        function highlightJSON(json) {
+            // 转义HTML特殊字符
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            // 匹配并高亮JSON语法元素
+            return json.replace(
+                /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+                function(match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return `<span class="${cls}">${match}</span>`;
+                }
+            );
+        }
+
+        // 9. 复制结果功能
+        copyOutput.addEventListener('click', () => {
+            // 从高亮的HTML中提取纯文本JSON
+            const preElement = jsonOutput.querySelector('pre');
+            if (preElement) {
+                const textContent = preElement.textContent;
+                
+                // 复制到剪贴板
+                navigator.clipboard.writeText(textContent).then(() => {
+                    // 显示复制成功提示
+                    copyToast.classList.remove('hidden');
+                    setTimeout(() => {
+                        copyToast.classList.add('hidden');
+                    }, 2000);
+                }).catch(err => {
+                    console.error('复制失败: ', err);
+                    errorMessage.textContent = '复制失败，请手动复制';
+                    errorAlert.classList.remove('hidden');
+                    setTimeout(() => {
+                        errorAlert.classList.add('hidden');
+                    }, 2000);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
