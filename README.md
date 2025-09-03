@@ -6,3 +6,4 @@
 - [XP 升级指南](https://chenjiafu-s.github.io/xp-upgrade.html)
 - [12小时制数字时钟](https://chenjiafu-s.github.io/digital-clock.html)
 - [24小时制数字时钟](https://chenjiafu-s.github.io/modern-digital-clock.html)
+- [24小时制流光数字时钟](https://chenjiafu-s.github.io/neon-clock-animation.html
