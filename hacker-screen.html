@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级黑客控制台</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 配置Tailwind自定义颜色和字体 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'hacker-green': '#00FF41',
+                        'hacker-dark': '#0A0A0A',
+                        'hacker-blue': '#00FFFF',
+                        'hacker-red': '#FF3A3A',
+                        'hacker-yellow': '#FFFF00',
+                        'hacker-purple': '#9900FF'
+                    },
+                    fontFamily: {
+                        'mono': ['Courier New', 'monospace']
+                    },
+                    animation: {
+                        'blink': 'blink 1s step-end infinite',
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-down': 'slideDown 1s ease-in-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'flicker': 'flicker 5s ease-in-out infinite',
+                        'data-flow': 'dataFlow 10s linear infinite',
+                        'ping-slow': 'ping 3s cubic-bezier(0, 0, 0.2, 1) infinite'
+                    },
+                    keyframes: {
+                        blink: {
+                            'from, to': { opacity: 1 },
+                            '50%': { opacity: 0 }
+                        },
+                        fadeIn: {
+                            'from': { opacity: 0 },
+                            'to': { opacity: 1 }
+                        },
+                        slideDown: {
+                            'from': { transform: 'translateY(-100%)', opacity: 0 },
+                            'to': { transform: 'translateY(0)', opacity: 1 }
+                        },
+                        flicker: {
+                            '0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100%': { opacity: 1 },
+                            '20%, 21.999%, 63%, 63.999%, 65%, 69.999%': { opacity: 0.33 }
+                        },
+                        dataFlow: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(100%)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .terminal-text {
+                font-family: 'Courier New', monospace;
+                line-height: 1.2;
+            }
+            .noise-texture {
+                background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+                opacity: 0.05;
+                pointer-events: none;
+            }
+            .scanline {
+                background: linear-gradient(to bottom,
+                    rgba(0, 255, 65, 0) 0%,
+                    rgba(0, 255, 65, 0.05) 50%,
+                    rgba(0, 255, 65, 0) 100%);
+                background-size: 100% 4px;
+                animation: scanline 0.5s linear infinite;
+            }
+            @keyframes scanline {
+                0% { transform: translateY(0); }
+                100% { transform: translateY(100vh); }
+            }
+            .glitch {
+                position: relative;
+            }
+            .glitch::before,
+            .glitch::after {
+                content: attr(data-text);
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                opacity: 0.8;
+            }
+            .glitch::before {
+                color: #00FFFF;
+                z-index: -1;
+                animation: glitch-effect 3s infinite;
+            }
+            .glitch::after {
+                color: #FF3A3A;
+                z-index: -2;
+                animation: glitch-effect 2s infinite;
+            }
+            @keyframes glitch-effect {
+                0% { transform: translate(0); }
+                20% { transform: translate(-2px, 2px); }
+                40% { transform: translate(-2px, -2px); }
+                60% { transform: translate(2px, 2px); }
+                80% { transform: translate(2px, -2px); }
+                100% { transform: translate(0); }
+            }
+            .console-border {
+                box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+                border: 1px solid rgba(0, 255, 65, 0.3);
+            }
+            .map-dot {
+                position: absolute;
+                width: 4px;
+                height: 4px;
+                border-radius: 50%;
+                background-color: var(--dot-color, #00FF41);
+                box-shadow: 0 0 8px var(--dot-color, #00FF41);
+            }
+            .progress-bar-bg {
+                background: linear-gradient(90deg, rgba(0, 255, 65, 0.1) 0%, rgba(0, 255, 65, 0.2) 100%);
+            }
+            .progress-bar-fill {
+                background: linear-gradient(90deg, #00FF41 0%, #00CC33 100%);
+            }
+            .net-flow {
+                animation: dataFlow 30s linear infinite;
+            }
+        }
+    </style>
+</head>
+<body class="bg-hacker-dark text-hacker-green min-h-screen font-mono cursor-none overflow-hidden">
+    <!-- 背景噪点纹理 -->
+    <div class="fixed inset-0 noise-texture"></div>
+    
+    <!-- 扫描线效果 -->
+    <div class="fixed inset-0 scanline pointer-events-none"></div>
+    
+    <!-- 主内容容器 - 网格布局 -->
+    <div class="w-full h-full p-2 md:p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 overflow-hidden">
+        <!-- 顶部状态栏 -->
+        <div id="system-header" class="lg:col-span-4 h-12 flex justify-between items-center px-4 bg-black/50 border-b border-hacker-green/30 z-20">
+            <div class="flex items-center space-x-4">
+                <div class="glitch" data-text="NEXUS OS v3.7.2">NEXUS OS v3.7.2</div>
+                <div id="global-status" class="flex items-center space-x-2 text-xs md:text-sm">
+                    <span class="inline-block w-2 h-2 bg-hacker-green rounded-full animate-pulse"></span>
+                    <span>系统状态: 在线</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div id="system-time" class="text-xs md:text-sm">00:00:00</div>
+                <div id="connection-status" class="text-xs md:text-sm flex items-center">
+                    <i class="fa fa-link mr-1"></i>
+                    <span>10.0.0.23:54321</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 系统信息面板 -->
+        <div id="system-panel" class="h-40 md:h-44 lg:h-60 bg-black/50 rounded-md p-3 console-border flex flex-col">
+            <div class="panel-header flex justify-between items-center mb-2 border-b border-hacker-green/30 pb-2">
+                <h3 class="font-bold text-sm md:text-base"><i class="fa fa-server mr-1"></i>系统信息</h3>
+                <div class="text-xs opacity-70">SYS-01</div>
+            </div>
+            <div class="panel-content flex-grow text-xs md:text-sm overflow-hidden">
+                <div class="system-stats grid grid-cols-2 gap-2 h-full">
+                    <div class="stat-item">
+                        <div class="stat-label text-hacker-blue mb-1">处理器</div>
+                        <div id="cpu-usage" class="stat-value flex items-center">
+                            <span class="mr-2">42%</span>
+                            <div class="w-full bg-black/50 rounded-full h-1">
+                                <div class="progress-bar-fill h-1 rounded-full" style="width: 42%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label text-hacker-blue mb-1">内存</div>
+                        <div id="memory-usage" class="stat-value flex items-center">
+                            <span class="mr-2">67%</span>
+                            <div class="w-full bg-black/50 rounded-full h-1">
+                                <div class="progress-bar-fill h-1 rounded-full" style="width: 67%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label text-hacker-blue mb-1">存储</div>
+                        <div id="storage-usage" class="stat-value flex items-center">
+                            <span class="mr-2">38%</span>
+                            <div class="w-full bg-black/50 rounded-full h-1">
+                                <div class="progress-bar-fill h-1 rounded-full" style="width: 38%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label text-hacker-blue mb-1">网络</div>
+                        <div id="network-usage" class="stat-value flex items-center">
+                            <span class="mr-2">128 MB/s</span>
+                            <div class="w-full bg-black/50 rounded-full h-1">
+                                <div class="progress-bar-fill h-1 rounded-full" style="width: 54%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 网络监控面板 -->
+        <div id="network-monitor" class="h-40 md:h-44 lg:h-60 bg-black/50 rounded-md p-3 console-border flex flex-col">
+            <div class="panel-header flex justify-between items-center mb-2 border-b border-hacker-green/30 pb-2">
+                <h3 class="font-bold text-sm md:text-base"><i class="fa fa-wifi mr-1"></i>网络监控</h3>
+                <div class="text-xs opacity-70">NET-01</div>
+            </div>
+            <div class="panel-content flex-grow text-xs md:text-sm overflow-hidden">
+                <div id="network-data" class="net-flow whitespace-pre-wrap">
+                    <!-- 网络数据会通过JS动态生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 安全扫描面板 -->
+        <div id="security-scanner" class="h-40 md:h-44 lg:h-60 bg-black/50 rounded-md p-3 console-border flex flex-col">
+            <div class="panel-header flex justify-between items-center mb-2 border-b border-hacker-green/30 pb-2">
+                <h3 class="font-bold text-sm md:text-base"><i class="fa fa-shield mr-1"></i>安全扫描</h3>
+                <div class="text-xs opacity-70">SCAN-01</div>
+            </div>
+            <div class="panel-content flex-grow text-xs md:text-sm overflow-hidden">
+                <div id="scan-results" class="scan-results overflow-hidden">
+                    <!-- 扫描结果会通过JS动态生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 地理位置追踪 -->
+        <div id="geo-tracker" class="h-40 md:h-44 lg:h-60 bg-black/50 rounded-md p-3 console-border flex flex-col">
+            <div class="panel-header flex justify-between items-center mb-2 border-b border-hacker-green/30 pb-2">
+                <h3 class="font-bold text-sm md:text-base"><i class="fa fa-map-marker mr-1"></i>地理位置</h3>
+                <div class="text-xs opacity-70">GEO-01</div>
+            </div>
+            <div class="panel-content flex-grow relative">
+                <!-- 简易地图 -->
+                <div id="mini-map" class="absolute inset-0 bg-black/30 rounded-md overflow-hidden">
+                    <!-- 地图点会通过JS动态生成 -->
+                </div>
+                <div class="absolute bottom-2 left-2 text-xs bg-black/70 px-2 py-1 rounded">
+                    <div id="geo-coordinates">经纬度: --,--</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 代码终端面板 -->
+        <div id="code-terminal" class="md:col-span-2 lg:col-span-2 h-64 md:h-80 bg-black/70 rounded-md p-3 console-border flex flex-col">
+            <div class="panel-header flex justify-between items-center mb-2 border-b border-hacker-green/30 pb-2">
+                <h3 class="font-bold text-sm md:text-base"><i class="fa fa-terminal mr-1"></i>终端</h3>
+                <div class="text-xs opacity-70">TERM-01</div>
+            </div>
+            <div class="panel-content flex-grow text-xs md:text-sm overflow-hidden">
+                <div id="terminal-output" class="terminal-text h-full overflow-hidden whitespace-pre-wrap break-all">
+                    <!-- 终端输出会通过JS动态生成 -->
+                </div>
+                <div id="command-prompt" class="flex items-center">
+                    <span class="mr-2 text-hacker-blue">root@nexus:~#</span>
+                    <span id="terminal-cursor" class="inline-block w-2 h-4 bg-hacker-green animate-blink"></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 进程监控面板 -->
+        <div id="process-monitor" class="h-64 md:h-80 bg-black/50 rounded-md p-3 console-border flex flex-col">
+            <div class="panel-header flex justify-between items-center mb-2 border-b border-hacker-green/30 pb-2">
+                <h3 class="font-bold text-sm md:text-base"><i class="fa fa-tasks mr-1"></i>进程监控</h3>
+                <div class="text-xs opacity-70">PROC-01</div>
+            </div>
+            <div class="panel-content flex-grow text-xs md:text-sm overflow-hidden">
+                <div id="process-list" class="process-list overflow-hidden">
+                    <!-- 进程列表会通过JS动态生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 文件系统浏览 -->
+        <div id="file-system" class="h-64 md:h-80 bg-black/50 rounded-md p-3 console-border flex flex-col">
+            <div class="panel-header flex justify-between items-center mb-2 border-b border-hacker-green/30 pb-2">
+                <h3 class="font-bold text-sm md:text-base"><i class="fa fa-folder mr-1"></i>文件系统</h3>
+                <div class="text-xs opacity-70">FS-01</div>
+            </div>
+            <div class="panel-content flex-grow text-xs md:text-sm overflow-hidden">
+                <div id="file-tree" class="file-tree overflow-hidden">
+                    <!-- 文件树会通过JS动态生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 事件日志面板 -->
+        <div id="event-log" class="lg:col-span-4 h-40 md:h-48 bg-black/50 rounded-md p-3 console-border flex flex-col">
+            <div class="panel-header flex justify-between items-center mb-2 border-b border-hacker-green/30 pb-2">
+                <h3 class="font-bold text-sm md:text-base"><i class="fa fa-history mr-1"></i>事件日志</h3>
+                <div class="text-xs opacity-70">LOG-01</div>
+            </div>
+            <div class="panel-content flex-grow text-xs md:text-sm overflow-hidden">
+                <div id="log-entries" class="log-entries overflow-hidden">
+                    <!-- 日志条目会通过JS动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 全局数据流覆盖层 -->
+    <div id="global-data-streams" class="fixed inset-0 pointer-events-none z-10 opacity-20">
+        <!-- 全局数据流会通过JS动态生成 -->
+    </div>
+    
+    <script>
+        // DOM元素引用
+        const systemTime = document.getElementById('system-time');
+        const connectionStatus = document.getElementById('connection-status');
+        const cpuUsage = document.getElementById('cpu-usage');
+        const memoryUsage = document.getElementById('memory-usage');
+        const storageUsage = document.getElementById('storage-usage');
+        const networkUsage = document.getElementById('network-usage');
+        const networkData = document.getElementById('network-data');
+        const scanResults = document.getElementById('scan-results');
+        const miniMap = document.getElementById('mini-map');
+        const geoCoordinates = document.getElementById('geo-coordinates');
+        const terminalOutput = document.getElementById('terminal-output');
+        const processList = document.getElementById('process-list');
+        const fileTree = document.getElementById('file-tree');
+        const logEntries = document.getElementById('log-entries');
+        const globalDataStreams = document.getElementById('global-data-streams');
+        
+        // 随机字符生成池
+        const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+-=[]{}|;:,.<>?';
+        const hexChars = '0123456789abcdef';
+        const ipChars = '0123456789';
+        
+        // 系统模块列表
+        const modules = [
+            'crypto.js', 'network.js', 'database.js', 'exploit.js', 
+            'recon.js', 'privilege.js', 'backdoor.js', 'encryption.js',
+            'firewall.js', 'anomaly.js', 'forensic.js', 'intelligence.js'
+        ];
+        
+        // 模拟的代码片段
+        const codeSnippets = [
+            'const exploitSystem = async () => {',
+            '  const target = "mainframe.core.biz";',
+            '  const port = 443;',
+            '  const payload = generateStealthPayload();',
+            '  ',
+            '  // 建立加密隧道',
+            '  const tunnel = await establishSecureTunnel(target, port);',
+            '  ',
+            '  if (tunnel.connected) {',
+            '    console.log(`[+] 隧道已建立: ${tunnel.id}`);',
+            '    ',
+            '    // 绕过防火墙检测',
+            '    const bypassed = await bypassFirewall(tunnel, {',
+            '      method: "fragmentation",',
+            '      obfuscation: "rot13",',
+            '      timing: "random"',
+            '    });',
+            '    ',
+            '    if (bypassed) {',
+            '      console.log(`[+] 防火墙绕过成功`);',
+            '      ',
+            '      // 发送攻击载荷',
+            '      const result = await injectPayload(tunnel, payload);',
+            '      ',
+            '      if (result.success) {',
+            '        console.log(`[+] 载荷注入成功，获得访问权限`);',
+            '        ',
+            '        // 提权操作',
+            '        const privEscalated = await escalatePrivileges();',
+            '        ',
+            '        if (privEscalated) {',
+            '          console.log(`[+] 权限提升至ROOT级别`);',
+            '          ',
+            '          // 执行数据提取',
+            '          await exfiltrateData({',
+            '            target: "database/main",',
+            '            method: "steganography",',
+            '            encryption: "aes-256-gcm",',
+            '            chunks: 100',
+            '          });',
+            '          ',
+            '          // 清理痕迹',
+            '          coverTracks();',
+            '          ',
+            '          return { success: true, accessLevel: "root" };',
+            '        }',
+            '      }',
+            '    }',
+            '  }',
+            '  ',
+            '  return { success: false, error: "Operation failed" };',
+            '};'
+        ];
+        
+        // 网络连接状态
+        const networkStates = [
+            'ESTABLISHED', 'SYN_SENT', 'SYN_RECV', 'FIN_WAIT1',
+            'FIN_WAIT2', 'TIME_WAIT', 'CLOSE', 'CLOSE_WAIT',
+            'LAST_ACK', 'LISTEN', 'CLOSING'
+        ];
+        
+        // 进程状态
+        const processStates = ['RUNNING', 'SLEEPING', 'STOPPED', 'ZOMBIE'];
+        
+        // 文件类型
+        const fileTypes = ['txt', 'js', 'py', 'cpp', 'h', 'html', 'css', 'json', 'xml', 'jpg', 'png', 'zip', 'rar', 'tar', 'gz'];
+        
+        // 事件日志类型
+        const logTypes = ['INFO', 'WARNING', 'ERROR', 'SUCCESS', 'ALERT'];
+        
+        // 随机生成IP地址
+        function generateIP() {
+            return `${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`;
+        }
+        
+        // 随机生成端口号
+        function generatePort() {
+            return Math.floor(Math.random() * 65535) + 1;
+        }
+        
+        // 生成随机MAC地址
+        function generateMAC() {
+            let mac = '';
+            for (let i = 0; i < 6; i++) {
+                if (i > 0) mac += ':';
+                mac += hexChars[Math.floor(Math.random() * hexChars.length)];
+                mac += hexChars[Math.floor(Math.random() * hexChars.length)];
+            }
+            return mac;
+        }
+        
+        // 生成随机十六进制数据
+        function generateHex(length) {
+            let hex = '';
+            for (let i = 0; i < length; i++) {
+                hex += hexChars[Math.floor(Math.random() * hexChars.length)];
+            }
+            return hex;
+        }
+        
+        // 更新系统时间
+        function updateSystemTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            systemTime.textContent = `${hours}:${minutes}:${seconds}`;
+        }
+        
+        // 更新系统资源使用情况
+        function updateSystemResources() {
+            // 随机波动的CPU使用率
+            const cpuVal = 30 + Math.floor(Math.random() * 40);
+            cpuUsage.innerHTML = `<span class="mr-2">${cpuVal}%</span><div class="w-full bg-black/50 rounded-full h-1"><div class="progress-bar-fill h-1 rounded-full" style="width: ${cpuVal}%"></div></div>`;
+            
+            // 随机波动的内存使用率
+            const memVal = 50 + Math.floor(Math.random() * 30);
+            memoryUsage.innerHTML = `<span class="mr-2">${memVal}%</span><div class="w-full bg-black/50 rounded-full h-1"><div class="progress-bar-fill h-1 rounded-full" style="width: ${memVal}%"></div></div>`;
+            
+            // 随机波动的存储使用率
+            const storageVal = 20 + Math.floor(Math.random() * 50);
+            storageUsage.innerHTML = `<span class="mr-2">${storageVal}%</span><div class="w-full bg-black/50 rounded-full h-1"><div class="progress-bar-fill h-1 rounded-full" style="width: ${storageVal}%"></div></div>`;
+            
+            // 随机网络流量
+            const netVal = 10 + Math.floor(Math.random() * 200);
+            const netPercent = Math.min(100, Math.floor((netVal / 250) * 100));
+            networkUsage.innerHTML = `<span class="mr-2">${netVal} MB/s</span><div class="w-full bg-black/50 rounded-full h-1"><div class="progress-bar-fill h-1 rounded-full" style="width: ${netPercent}%"></div></div>`;
+        }
+        
+        // 更新网络监控数据
+        function updateNetworkData() {
+            const connections = [];
+            for (let i = 0; i < 8; i++) {
+                const localIP = generateIP();
+                const localPort = generatePort();
+                const remoteIP = generateIP();
+                const remotePort = generatePort();
+                const state = networkStates[Math.floor(Math.random() * networkStates.length)];
+                
+                let stateColor = 'text-hacker-green';
+                if (state === 'SYN_SENT' || state === 'SYN_RECV') stateColor = 'text-hacker-yellow';
+                if (state === 'ERROR' || state === 'CLOSE') stateColor = 'text-hacker-red';
+                
+                connections.push(`${localIP}:${localPort} -> ${remoteIP}:${remotePort} [${state}]`);
+            }
+            
+            networkData.innerHTML = connections.join('\n');
+        }
+        
+        // 更新安全扫描结果
+        function updateScanResults() {
+            const vulnerabilities = [
+                'CVE-2023-1234: SQL Injection - High',
+                'CVE-2023-5678: Remote Code Execution - Critical',
+                'CVE-2023-9012: Cross-Site Scripting - Medium',
+                'CVE-2023-3456: Buffer Overflow - High',
+                'CVE-2023-7890: Privilege Escalation - High',
+                'CVE-2023-2468: Information Disclosure - Low',
+                'CVE-2023-1357: Authentication Bypass - Critical',
+                'CVE-2023-9753: Command Injection - High'
+            ];
+            
+            const results = [];
+            const numVulns = Math.floor(Math.random() * 4) + 1;
+            
+            for (let i = 0; i < numVulns; i++) {
+                const vuln = vulnerabilities[Math.floor(Math.random() * vulnerabilities.length)];
+                const severity = vuln.split(' - ')[1];
+                let severityColor = 'text-hacker-green';
+                
+                if (severity === 'Critical') severityColor = 'text-hacker-red';
+                else if (severity === 'High') severityColor = 'text-hacker-yellow';
+                else if (severity === 'Medium') severityColor = 'text-hacker-blue';
+                
+                results.push(`<span class="${severityColor}">${vuln}</span>`);
+            }
+            
+            // 添加扫描进度
+            const progress = Math.floor(Math.random() * 100);
+            results.push(`\n扫描进度: ${progress}%`);
+            
+            scanResults.innerHTML = results.join('\n');
+        }
+        
+        // 更新地理位置追踪
+        function updateGeoTracker() {
+            // 清除现有地图点
+            miniMap.innerHTML = '';
+            
+            // 添加新的地图点
+            const numPoints = Math.floor(Math.random() * 5) + 3;
+            const colors = ['#00FF41', '#00FFFF', '#FF3A3A', '#FFFF00', '#9900FF'];
+            
+            for (let i = 0; i < numPoints; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'map-dot';
+                dot.style.left = `${20 + Math.random() * 60}%`;
+                dot.style.top = `${20 + Math.random() * 60}%`;
+                dot.style.setProperty('--dot-color', colors[Math.floor(Math.random() * colors.length)]);
+                
+                // 添加脉冲效果
+                dot.style.animation = `ping-slow ${2 + Math.random() * 3}s cubic-bezier(0, 0, 0.2, 1) infinite`;
+                
+                miniMap.appendChild(dot);
+            }
+            
+            // 更新坐标
+            const lat = (Math.random() * 180 - 90).toFixed(6);
+            const lon = (Math.random() * 360 - 180).toFixed(6);
+            geoCoordinates.textContent = `经纬度: ${lat},${lon}`;
+        }
+        
+        // 显示终端代码
+        let currentCodeLine = 0;
+        function showTerminalCode() {
+            if (currentCodeLine < codeSnippets.length) {
+                const codeLine = codeSnippets[currentCodeLine];
+                
+                // 检查是否需要添加换行
+                if (terminalOutput.textContent !== '') {
+                    terminalOutput.textContent += '\n';
+                }
+                
+                // 模拟打字效果
+                let charsPrinted = 0;
+                const typeInterval = setInterval(() => {
+                    if (charsPrinted < codeLine.length) {
+                        terminalOutput.textContent += codeLine[charsPrinted];
+                        charsPrinted++;
+                    } else {
+                        clearInterval(typeInterval);
+                        currentCodeLine++;
+                        
+                        // 如果到达代码末尾，重新开始
+                        if (currentCodeLine >= codeSnippets.length) {
+                            setTimeout(() => {
+                                terminalOutput.textContent = '';
+                                currentCodeLine = 0;
+                                showTerminalCode();
+                            }, 2000);
+                        } else {
+                            // 随机时间间隔显示下一行
+                            setTimeout(showTerminalCode, 150 + Math.random() * 300);
+                        }
+                    }
+                }, 20 + Math.random() * 30);
+            }
+        }
+        
+        // 更新进程监控
+        function updateProcessMonitor() {
+            const processes = [];
+            const processNames = ['systemd', 'kernel', 'sshd', 'httpd', 'nginx', 'mysql', 'redis', 'node', 'python', 'bash', 'exploit', 'scanner', 'cracker', 'sniffer', 'decrypt'];
+            
+            for (let i = 0; i < 8; i++) {
+                const pid = Math.floor(Math.random() * 32768) + 1;
+                const name = processNames[Math.floor(Math.random() * processNames.length)];
+                const state = processStates[Math.floor(Math.random() * processStates.length)];
+                const cpu = (Math.random() * 10).toFixed(1);
+                const mem = (Math.random() * 5).toFixed(1);
+                
+                let stateColor = 'text-hacker-green';
+                if (state === 'STOPPED' || state === 'ZOMBIE') stateColor = 'text-hacker-red';
+                if (state === 'SLEEPING') stateColor = 'text-hacker-blue';
+                
+                processes.push(`PID:${pid} ${name.padEnd(12)} <span class="${stateColor}">${state}</span> CPU:${cpu}% MEM:${mem}%`);
+            }
+            
+            processList.innerHTML = processes.join('\n');
+        }
+        
+        // 更新文件系统
+        function updateFileSystem() {
+            const files = [];
+            
+            // 根目录
+            files.push('<span class="text-hacker-blue">/</span>');
+            files.push('├── <span class="text-hacker-blue">bin</span>/');
+            files.push('├── <span class="text-hacker-blue">etc</span>/');
+            files.push('│   ├── <span class="text-hacker-green">passwd</span>');
+            files.push('│   ├── <span class="text-hacker-green">shadow</span>');
+            files.push('│   └── <span class="text-hacker-green">hosts</span>');
+            files.push('├── <span class="text-hacker-blue">home</span>/');
+            files.push('│   └── <span class="text-hacker-blue">user</span>/');
+            files.push('│       ├── <span class="text-hacker-green">.bashrc</span>');
+            files.push('│       └── <span class="text-hacker-green">.ssh</span>/');
+            files.push('└── <span class="text-hacker-blue">var</span>/');
+            
+            // 添加随机文件
+            for (let i = 0; i < 3; i++) {
+                const fileName = generateRandomString(6, 12);
+                const fileExt = fileTypes[Math.floor(Math.random() * fileTypes.length)];
+                const fileSize = (Math.random() * 100).toFixed(1);
+                files.push(`    ├── <span class="text-hacker-green">${fileName}.${fileExt}</span> (${fileSize} KB)`);
+            }
+            
+            fileTree.innerHTML = files.join('\n');
+        }
+        
+        // 生成随机字符串
+        function generateRandomString(minLength, maxLength) {
+            const length = minLength + Math.floor(Math.random() * (maxLength - minLength + 1));
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return result;
+        }
+        
+        // 添加日志条目
+        function addLogEntry() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            const timestamp = `${hours}:${minutes}:${seconds}`;
+            
+            const logType = logTypes[Math.floor(Math.random() * logTypes.length)];
+            
+            let typeColor = 'text-hacker-green';
+            if (logType === 'ERROR' || logType === 'ALERT') typeColor = 'text-hacker-red';
+            else if (logType === 'WARNING') typeColor = 'text-hacker-yellow';
+            else if (logType === 'SUCCESS') typeColor = 'text-hacker-blue';
+            
+            const logMessages = [
+                '连接到远程服务器成功',
+                '检测到异常网络流量',
+                '安全模块更新完成',
+                '密码破解尝试失败',
+                '漏洞利用成功',
+                '系统自检完成，一切正常',
+                '发现未授权访问尝试',
+                '数据解密成功',
+                '防火墙规则已更新',
+                '进程扫描发现可疑活动',
+                '网络扫描完成',
+                '检测到恶意软件特征',
+                '数据库备份完成',
+                '加密隧道已建立',
+                '权限提升成功'
+            ];
+            
+            const message = logMessages[Math.floor(Math.random() * logMessages.length)];
+            const logEntry = `<span class="text-xs opacity-50">${timestamp}</span> [${logType}] ${message}`;
+            
+            // 添加到日志顶部
+            const logContent = logEntries.innerHTML;
+            logEntries.innerHTML = `${logEntry}\n${logContent}`;
+            
+            // 限制日志行数
+            const logLines = logEntries.innerHTML.split('\n');
+            if (logLines.length > 15) {
+                logEntries.innerHTML = logLines.slice(0, 15).join('\n');
+            }
+        }
+        
+        // 创建全局数据流
+        let streamCount = 0;
+        const maxStreams = 8;
+        function createGlobalDataStream() {
+            if (streamCount >= maxStreams) return;
+            
+            const stream = document.createElement('div');
+            stream.className = 'absolute top-0 bottom-0 w-12 text-2xl font-mono opacity-30 select-none';
+            stream.style.left = `${Math.random() * 100}%`;
+            
+            let streamContent = '';
+            const chars = '01'; // 使用二进制字符更有黑客感
+            for (let i = 0; i < 30; i++) {
+                let line = '';
+                for (let j = 0; j < 10; j++) {
+                    line += chars[Math.floor(Math.random() * chars.length)];
+                }
+                streamContent += line + '\n';
+            }
+            
+            stream.textContent = streamContent;
+            stream.style.animation = `dataFlow ${10 + Math.random() * 20}s linear infinite`;
+            
+            globalDataStreams.appendChild(stream);
+            streamCount++;
+            
+            // 一段时间后移除数据流
+            setTimeout(() => {
+                if (stream.parentNode) {
+                    stream.parentNode.removeChild(stream);
+                    streamCount--;
+                }
+            }, 8000 + Math.random() * 12000);
+        }
+        
+        // 系统初始化
+        function init() {
+            // 启动时间更新
+            updateSystemTime();
+            setInterval(updateSystemTime, 1000);
+            
+            // 更新系统资源使用情况
+            updateSystemResources();
+            setInterval(updateSystemResources, 2000);
+            
+            // 更新网络监控数据
+            updateNetworkData();
+            setInterval(updateNetworkData, 3000);
+            
+            // 更新安全扫描结果
+            updateScanResults();
+            setInterval(updateScanResults, 5000);
+            
+            // 更新地理位置追踪
+            updateGeoTracker();
+            setInterval(updateGeoTracker, 8000);
+            
+            // 开始显示终端代码
+            setTimeout(showTerminalCode, 1000);
+            
+            // 更新进程监控
+            updateProcessMonitor();
+            setInterval(updateProcessMonitor, 4000);
+            
+            // 更新文件系统
+            updateFileSystem();
+            setInterval(updateFileSystem, 10000);
+            
+            // 添加日志条目
+            setInterval(addLogEntry, 2000);
+            
+            // 创建全局数据流
+            setInterval(createGlobalDataStream, 1500);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
