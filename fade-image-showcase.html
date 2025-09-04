@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片淡入淡出展示</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #image-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #fade-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="image-container">
+        <img id="fade-image" src="https://github.com/ChenJiafu-s/ChenJiafu-s.github.io/blob/4c927f5b1ba03332bffbbfffea203d143d0713cd/%E7%B4%A2%E4%BC%A6%E9%AD%94%E7%9C%BC.gif?raw=true" alt="图片展示">
+    </div>
+
+    <script>
+        const image = document.getElementById('fade-image');
+        const fadeInDuration = 4000; // 淡入时间（毫秒）
+        const displayDuration = 3000; // 显示时间（毫秒）
+        const fadeOutDuration = 2000; // 淡出时间（毫秒）
+        const intervalDuration = 3000; // 两次显示之间的间隔（毫秒）
+        const totalCycleTime = fadeInDuration + displayDuration + fadeOutDuration + intervalDuration; // 总循环时间
+
+        // 控制图片淡入淡出的函数
+        function fadeImage() {
+            // 设置淡入动画时间
+            image.style.transition = `opacity ${fadeInDuration}ms ease-in-out`;
+            // 淡入
+            image.style.opacity = '1';
+            
+            // 显示一段时间后淡出
+            setTimeout(() => {
+                // 设置淡出动画时间
+                image.style.transition = `opacity ${fadeOutDuration}ms ease-in-out`;
+                image.style.opacity = '0';
+            }, displayDuration);
+        }
+
+        // 初始延迟后开始循环
+        setTimeout(() => {
+            fadeImage();
+            // 设置循环
+            setInterval(fadeImage, totalCycleTime);
+        }, 1000);
+    </script>
+</body>
+</html>
