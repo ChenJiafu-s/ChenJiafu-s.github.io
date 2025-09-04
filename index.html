@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallpaper Collection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        
+        .card {
+            transition: all 0.3s ease;
+            background: linear-gradient(145deg, #1e1e1e, #1a1a1a);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+        
+        .card-link {
+            position: relative;
+            display: block;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover .card-link {
+            color: #ffffff;
+        }
+        
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #6366f1;
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-description {
+            font-size: 0.9rem;
+            color: #a0a0a0;
+            margin-bottom: 1rem;
+        }
+        
+        .card-footer {
+            font-size: 0.85rem;
+            color: #6366f1;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-footer i {
+            margin-right: 0.5rem;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-align: center;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-top: 2rem;
+        }
+        
+        .header-subtitle {
+            color: #a0a0a0;
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease forwards;
+            opacity: 0;
+        }
+        
+        /* Delay animation for each card */
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+        .card:nth-child(5) { animation-delay: 0.5s; }
+        .card:nth-child(6) { animation-delay: 0.6s; }
+        .card:nth-child(7) { animation-delay: 0.7s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="section-title">Wallpaper Collection</h1>
+            <p class="header-subtitle">精选HTML互动动画和效果集合</p>
+        </header>
+        
+        <div class="grid">
+            <!-- Digital Clock -->
+            <div class="card fade-in-up">
+                <a href="digital-clock.html" class="card-link">
+                    <div class="card-icon">
+                        <i class="fa fa-clock-o"></i>
+                    </div>
+                    <h3 class="card-title">Digital Clock</h3>
+                    <p class="card-description">一个简洁的数字时钟展示，显示当前时间和日期。</p>
+                    <div class="card-footer">
+                        <i class="fa fa-external-link"></i>
+                        查看详情
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Hacker Screen -->
+            <div class="card fade-in-up">
+                <a href="hacker-screen.html" class="card-link">
+                    <div class="card-icon">
+                        <i class="fa fa-terminal"></i>
+                    </div>
+                    <h3 class="card-title">Hacker Screen</h3>
+                    <p class="card-description">黑客风格的屏幕效果，带有代码雨和矩阵效果。</p>
+                    <div class="card-footer">
+                        <i class="fa fa-external-link"></i>
+                        查看详情
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Image Animation -->
+            <div class="card fade-in-up">
+                <a href="image-animation.html" class="card-link">
+                    <div class="card-icon">
+                        <i class="fa fa-film"></i>
+                    </div>
+                    <h3 class="card-title">Image Animation</h3>
+                    <p class="card-description">图片动画效果，带有渐入渐隐和随机显示功能。</p>
+                    <div class="card-footer">
+                        <i class="fa fa-external-link"></i>
+                        查看详情
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Matrix Rain -->
+            <div class="card fade-in-up">
+                <a href="matrix-rain.html" class="card-link">
+                    <div class="card-icon">
+                        <i class="fa fa-code"></i>
+                    </div>
+                    <h3 class="card-title">Matrix Rain</h3>
+                    <p class="card-description">仿《黑客帝国》中的数字雨效果，科技感十足。</p>
+                    <div class="card-footer">
+                        <i class="fa fa-external-link"></i>
+                        查看详情
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Modern Digital Clock -->
+            <div class="card fade-in-up">
+                <a href="modern-digital-clock.html" class="card-link">
+                    <div class="card-icon">
+                        <i class="fa fa-clock-o"></i>
+                    </div>
+                    <h3 class="card-title">Modern Digital Clock</h3>
+                    <p class="card-description">现代风格的数字时钟，具有时尚的界面设计。</p>
+                    <div class="card-footer">
+                        <i class="fa fa-external-link"></i>
+                        查看详情
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Windows 12 Install -->
+            <div class="card fade-in-up">
+                <a href="windows12-install.html" class="card-link">
+                    <div class="card-icon">
+                        <i class="fa fa-windows"></i>
+                    </div>
+                    <h3 class="card-title">Windows 12 Install</h3>
+                    <p class="card-description">Windows 12安装界面模拟，展示操作系统安装过程。</p>
+                    <div class="card-footer">
+                        <i class="fa fa-external-link"></i>
+                        查看详情
+                    </div>
+                </a>
+            </div>
+            
+            <!-- XP Upgrade -->
+            <div class="card fade-in-up">
+                <a href="xp-upgrade.html" class="card-link">
+                    <div class="card-icon">
+                        <i class="fa fa-refresh"></i>
+                    </div>
+                    <h3 class="card-title">XP Upgrade</h3>
+                    <p class="card-description">Windows XP升级过程模拟，怀旧的操作系统升级界面。</p>
+                    <div class="card-footer">
+                        <i class="fa fa-external-link"></i>
+                        查看详情
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 页面加载完成后启动动画
+        document.addEventListener('DOMContentLoaded', () => {
+            // 检查是否支持CSS动画
+            const isAnimationSupported = () => {
+                const animation = document.createElement('div').style.animation;
+                return animation !== undefined;
+            };
+            
+            // 如果支持动画，则添加动画类
+            if (isAnimationSupported()) {
+                const cards = document.querySelectorAll('.card');
+                cards.forEach(card => {
+                    card.classList.add('fade-in-up');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
