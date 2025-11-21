@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Nebula Clock</title>
+    <style>
+        /* === 基础环境设置 === */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        /* 隐藏鼠标 */
+        body {
+            cursor: none;
+        }
+
+        /* === 背景流光画布 === */
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* === 时钟容器 === */
+        #clock-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            
+            /* 磨砂玻璃背景：让时钟在复杂背景上更清晰，同时保留通透感 */
+            /* 注意：backdrop-filter 需要浏览器支持，现代浏览器均支持 */
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(4px); 
+            -webkit-backdrop-filter: blur(4px);
+            
+            padding: 20px 40px;
+            border-radius: 20px;
+            /* 极淡的边框，增加精致感 */
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 30px rgba(0,0,0,0.2);
+            
+            /* 初始透明，渐变显示 */
+            opacity: 0;
+            animation: fadeIn 2s ease-out forwards 0.5s;
+        }
+
+        /* === 数字本体 === */
+        #clock {
+            font-size: 12vw; /* 随屏幕缩放 */
+            font-weight: 400; /* 增加字重，让发光更明显 */
+            letter-spacing: 0.05em;
+            line-height: 1;
+            
+            /* 核心颜色：不是纯白，而是稍带透明，让光晕透出来 */
+            color: rgba(255, 255, 255, 0.95);
+            
+            /* 强制等宽数字，防止跳动 */
+            font-variant-numeric: tabular-nums;
+            
+            /* 交互限制 */
+            user-select: none;
+            pointer-events: none;
+            
+            /* 初始阴影（会被JS覆盖） */
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            
+            /* 性能优化：开启硬件加速 */
+            will-change: text-shadow;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* 宽屏适配 */
+        @media (min-aspect-ratio: 2/1) {
+            #clock { font-size: 15vh; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="clock-container">
+        <div id="clock">00:00:00</div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+
+    <script>
+        /* ================= 核心逻辑 ================= */
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const clockEl = document.getElementById('clock');
+
+        let width, height;
+        let particles = [];
+        const particleDensity = 750; 
+        
+        // 动画状态
+        let time = 0;
+        let hueCycle = 0; // 颜色的轮回
+
+        // 初始化
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initParticles();
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        class Particle {
+            constructor() {
+                this.reset();
+                this.life = Math.random() * 300;
+            }
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = 0;
+                this.vy = 0;
+                this.life = Math.random() * 200 + 200;
+                this.size = Math.random() * 1.5 + 0.5;
+            }
+            update() {
+                const spatialScale = 0.002;
+                const angle = (Math.cos(this.x * spatialScale + time * 0.5) + 
+                               Math.sin(this.y * spatialScale + time * 0.5)) * Math.PI;
+
+                this.vx += Math.cos(angle) * 0.2;
+                this.vy += Math.sin(angle) * 0.2;
+                this.vx *= 0.94; 
+                this.vy *= 0.94;
+
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+
+                if (this.x < 0 || this.x > width || this.y < 0 || this.y > height || this.life <= 0) {
+                    if (this.life <= 0) this.reset();
+                    else {
+                        if (this.x < 0) this.x = width;
+                        if (this.x > width) this.x = 0;
+                        if (this.y < 0) this.y = height;
+                        if (this.y > height) this.y = 0;
+                    }
+                }
+            }
+            draw() {
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                const alpha = Math.min(speed * 0.3, 0.8);
+                // 粒子颜色
+                const pColor = `hsla(${hueCycle + (this.x / width) * 60 + speed * 20}, 80%, 60%, ${alpha})`;
+
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x - this.vx * 2, this.y - this.vy * 2);
+                ctx.strokeStyle = pColor;
+                ctx.lineWidth = this.size;
+                ctx.stroke();
+            }
+        }
+
+        function initParticles() {
+            const count = Math.floor((width * height) / particleDensity);
+            particles = [];
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function pad(num) {
+            return num < 10 ? '0' + num : num;
+        }
+
+        function animate() {
+            // --- 背景绘制 ---
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.04)'; // 拖尾长度控制
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.globalCompositeOperation = 'lighter';
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            // 更新时间变量
+            time += 0.005;
+            hueCycle += 0.2; // 颜色流转速度
+
+            // --- 时钟更新逻辑 ---
+            const now = new Date();
+            const h = pad(now.getHours());
+            const m = pad(now.getMinutes());
+            const s = pad(now.getSeconds());
+            const timeString = `${h}:${m}:${s}`;
+
+            if (clockEl.innerText !== timeString) {
+                clockEl.innerText = timeString;
+            }
+
+            // --- 关键：动态霓虹光效算法 ---
+            
+            // 1. 基础色相：跟随背景颜色
+            const baseHue = hueCycle;
+            
+            // 2. 呼吸节奏：利用正弦函数创建一个 0.8 到 1.0 之间的波动值，速度较慢
+            // Date.now() / 2000 决定了呼吸的频率
+            const pulse = (Math.sin(Date.now() / 1000) + 1) / 2 * 0.2 + 0.8; // 范围 0.8 - 1.0
+            
+            // 3. 构建多层阴影
+            // Layer 1: 白色高亮核心 (清晰)
+            // Layer 2: 浅色光晕 (中等模糊)
+            // Layer 3: 深色氛围光 (大模糊)
+            // Layer 4: 极宽的环境光 (超大模糊)
+            
+            const shadowColorPrimary = `hsla(${baseHue}, 100%, 70%, ${0.8 * pulse})`;
+            const shadowColorAmbient = `hsla(${baseHue}, 100%, 50%, ${0.4 * pulse})`;
+
+            clockEl.style.textShadow = `
+                0 0 5px rgba(255, 255, 255, 0.8),
+                0 0 15px ${shadowColorPrimary},
+                0 0 40px ${shadowColorAmbient},
+                0 0 100px ${shadowColorAmbient}
+            `;
+
+            // 让边框也跟着微微发光
+            const container = document.getElementById('clock-container');
+            container.style.borderColor = `hsla(${baseHue}, 100%, 80%, 0.1)`;
+            container.style.boxShadow = `0 0 30px hsla(${baseHue}, 100%, 50%, 0.05)`;
+
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', resize);
+
+        resize();
+        animate();
+
+    </script>
+</body>
+</html>

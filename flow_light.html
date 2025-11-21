@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethereal Flow - 静谧流光</title>
+    <style>
+        /* 页面基础设置 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000000; /* 纯黑底色 */
+            overflow: hidden; /* 隐藏滚动条 */
+        }
+
+        /* 关键：隐藏鼠标指针 */
+        body {
+            cursor: none; 
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        /**
+         * 核心逻辑：基于三角函数的伪噪声流场
+         * 特点：自动演化，无交互，纯净视觉
+         */
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false }); // 优化性能
+
+        let width, height;
+        let particles = [];
+        // 降低粒子密度，使线条更优雅，而非杂乱
+        const particleDensity = 700; 
+        
+        // 自动演化参数
+        let time = 0;
+        let hueCycle = 0;
+
+        // 初始化画布尺寸
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initParticles();
+            
+            // 重置背景
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        class Particle {
+            constructor() {
+                this.reset();
+                // 初始赋予随机寿命，错开消失时间
+                this.life = Math.random() * 300; 
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = 0;
+                this.vy = 0;
+                this.life = Math.random() * 200 + 200; // 寿命200-400帧
+                this.size = Math.random() * 1.5 + 0.5; // 线条粗细随机
+            }
+
+            update() {
+                // 核心算法：流场角度计算
+                // x, y 决定空间位置
+                // time 决定时间维度的变化（纹理的缓慢变形）
+                // 0.002 是空间缩放系数，决定波纹的疏密
+                const spatialScale = 0.002;
+                const angle = (Math.cos(this.x * spatialScale + time * 0.5) + 
+                               Math.sin(this.y * spatialScale + time * 0.5)) * Math.PI;
+
+                // 施加力
+                this.vx += Math.cos(angle) * 0.2;
+                this.vy += Math.sin(angle) * 0.2;
+
+                // 摩擦力/阻力，防止速度无限增加
+                this.vx *= 0.94;
+                this.vy *= 0.94;
+
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+
+                // 边界处理：超出屏幕另一侧飞回，或者寿命结束重置
+                if (this.x < 0 || this.x > width || this.y < 0 || this.y > height || this.life <= 0) {
+                    // 只有 1% 的概率完全重置位置，否则从屏幕边缘绕回，保持流动的连续性
+                    if (this.life <= 0) {
+                        this.reset();
+                    } else {
+                        // 环绕屏幕
+                        if (this.x < 0) this.x = width;
+                        if (this.x > width) this.x = 0;
+                        if (this.y < 0) this.y = height;
+                        if (this.y > height) this.y = 0;
+                    }
+                }
+            }
+
+            draw() {
+                // 速度越快，线条越亮
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                const alpha = Math.min(speed * 0.3, 0.8); // 透明度上限 0.8
+
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                // 绘制一个小尾巴，使线条更顺滑
+                ctx.lineTo(this.x - this.vx * 2, this.y - this.vy * 2);
+                
+                // 颜色生成：
+                // hueCycle: 随时间整体变色
+                // this.x / width * 60: 随屏幕水平位置产生渐变
+                // speed * 20: 速度越快颜色稍微偏移
+                const color = `hsla(${hueCycle + (this.x / width) * 60 + speed * 20}, 80%, 60%, ${alpha})`;
+                
+                ctx.strokeStyle = color;
+                ctx.lineWidth = this.size;
+                ctx.stroke();
+            }
+        }
+
+        function initParticles() {
+            const count = Math.floor((width * height) / particleDensity);
+            particles = [];
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animate() {
+            // 1. 拖尾效果：
+            // 每一帧覆盖一层极淡的黑色。
+            // 0.03 的透明度意味着原来的线条需要约 33 帧才会完全消失，形成长长的丝绸感。
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillRect(0, 0, width, height);
+
+            // 2. 混合模式设为 'lighter' (变亮/叠加)
+            // 这会让重叠的粒子产生发光效果
+            ctx.globalCompositeOperation = 'lighter';
+
+            // 3. 更新绘制
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            // 4. 全局参数缓慢演变
+            time += 0.005; // 纹理变形速度（极慢）
+            hueCycle += 0.1; // 颜色循环速度
+
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', resize);
+
+        // 启动
+        resize();
+        animate();
+
+    </script>
+</body>
+</html>
