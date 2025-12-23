@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>太阳系行星模型</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+
+        #universe {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #sun {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #ffd700, #ff8c00);
+            border-radius: 50%;
+            box-shadow: 0 0 50px #ff8c00;
+            z-index: 10;
+        }
+
+        .orbit {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+
+        .planet {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            border-radius: 50%;
+            z-index: 20;
+        }
+
+        .planet-label {
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            text-shadow: 0 0 4px #000;
+        }
+
+        .asteroid {
+            position: absolute;
+            background-color: rgba(220, 220, 220, 0.9);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+            box-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="universe">
+        <div id="sun">
+            <div class="planet-label">Sun</div>
+        </div>
+    </div>
+    <script>
+        const universe = document.getElementById('universe');
+
+        // 行星数据
+        // 模拟真实世界的椭圆轨道特性：太阳位于焦点
+        // distance: 半长轴 a (pixels)
+        // eccentricity: 偏心率 e (0 ~ 1)
+        // speed: 公转角速度
+        // color: 行星颜色
+        const planets = [
+            { name: 'Mercury', size: 10, distance: 60, speed: 0.04, color: '#A9A9A9', eccentricity: 0.206 },
+            { name: 'Venus', size: 18, distance: 100, speed: 0.015, color: '#DEB887', eccentricity: 0.007 },
+            { name: 'Earth', size: 20, distance: 150, speed: 0.01, color: '#4169E1', eccentricity: 0.017 },
+            { name: 'Mars', size: 14, distance: 210, speed: 0.008, color: '#CD5C5C', eccentricity: 0.093 },
+            { name: 'Jupiter', size: 40, distance: 380, speed: 0.002, color: '#D2B48C', eccentricity: 0.048 },
+            { name: 'Saturn', size: 35, distance: 520, speed: 0.0009, color: '#F4A460', eccentricity: 0.054 },
+            { name: 'Uranus', size: 25, distance: 640, speed: 0.0004, color: '#87CEEB', eccentricity: 0.047 },
+            { name: 'Neptune', size: 24, distance: 750, speed: 0.0001, color: '#4682B4', eccentricity: 0.009 }
+        ];
+
+        const planetElements = [];
+
+        // 小行星带配置 (位于火星和木星之间)
+        const asteroidBelt = {
+            particles: [],
+            count: 300,
+            innerRadius: 260,
+            outerRadius: 310
+        };
+
+        function initSolarSystem() {
+            planets.forEach(planetData => {
+                const a = planetData.distance; // 半长轴
+                const e = planetData.eccentricity;
+                const b = a * Math.sqrt(1 - e * e); // 半短轴 b = a * sqrt(1-e^2)
+                const c = a * e; // 焦距 c = a * e
+
+                // 创建轨道
+                // 轨道是一个 div，设置为椭圆
+                const orbit = document.createElement('div');
+                orbit.className = 'orbit';
+                orbit.style.width = `${2 * a}px`;
+                orbit.style.height = `${2 * b}px`;
+                orbit.style.transform = `translate(-50%, -50%) translateX(${c}px)`;
+                
+                universe.appendChild(orbit);
+
+                // 创建行星
+                const planet = document.createElement('div');
+                planet.className = 'planet';
+                planet.style.width = `${planetData.size}px`;
+                planet.style.height = `${planetData.size}px`;
+                planet.style.backgroundColor = planetData.color;
+                
+                // 行星标签
+                const label = document.createElement('div');
+                label.className = 'planet-label';
+                label.innerText = planetData.name;
+                planet.appendChild(label);
+                
+                universe.appendChild(planet);
+
+                planetElements.push({
+                    element: planet,
+                    data: planetData,
+                    a: a,
+                    b: b,
+                    c: c,
+                    angle: Math.random() * Math.PI * 2
+                });
+            });
+        }
+
+        function initAsteroidBelt() {
+            for (let i = 0; i < asteroidBelt.count; i++) {
+                const asteroid = document.createElement('div');
+                asteroid.className = 'asteroid';
+                
+                // 随机大小 (1-2.5px)
+                const size = Math.random() * 1.5 + 1;
+                asteroid.style.width = `${size}px`;
+                asteroid.style.height = `${size}px`;
+                
+                // 随机位置 (圆环内)
+                const angle = Math.random() * Math.PI * 2;
+                const distance = asteroidBelt.innerRadius + Math.random() * (asteroidBelt.outerRadius - asteroidBelt.innerRadius);
+                
+                universe.appendChild(asteroid);
+                
+                asteroidBelt.particles.push({
+                    element: asteroid,
+                    distance: distance,
+                    angle: angle,
+                    // 速度介于火星和木星之间，随距离减小
+                    speed: 0.005 + (100 / distance) * 0.001
+                });
+            }
+        }
+
+        function animate() {
+            planetElements.forEach(p => {
+                // 计算当前位置 (相对于轨道中心)
+                // 参数方程: x = a * cos(E), y = b * sin(E)
+                const E = p.angle;
+                const x_orbit = p.a * Math.cos(E);
+                const y_orbit = p.b * Math.sin(E);
+                
+                const x_final = x_orbit + p.c; // 修正符号，因为我们把轨道向右移了 c
+                const y_final = y_orbit;
+
+                // 开普勒第二定律模拟
+                const r = Math.sqrt(x_final * x_final + y_final * y_final);
+                const speedFactor = (p.a / r) * (p.a / r); 
+                
+                p.angle += p.data.speed * speedFactor;
+
+                // 应用行星位置
+                p.element.style.transform = `translate(-50%, -50%) translate(${x_final}px, ${y_final}px)`;
+            });
+
+            // 小行星带动画
+            asteroidBelt.particles.forEach(p => {
+                p.angle += p.speed;
+                const x = Math.cos(p.angle) * p.distance;
+                const y = Math.sin(p.angle) * p.distance;
+                p.element.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // 自动缩放以适应屏幕
+        function resize() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            // 获取最大的轨道半径 (海王星)
+            // distance 是半长轴 a，加上 c (偏心距离) 才是最远距离 (远日点)
+            // 远日点距离 = a + c = a(1+e)
+            const maxPlanet = planets[planets.length - 1];
+            const maxDistance = maxPlanet.distance * (1 + maxPlanet.eccentricity);
+            
+            // 加上行星大小和额外的 padding (比如 40px)
+            const requiredRadius = maxDistance + maxPlanet.size + 40;
+            
+            // 计算缩放比例
+            const scale = Math.min(width, height) / (requiredRadius * 2);
+            
+            // 应用缩放
+            // 限制最大缩放为 1 (不放大，只缩小) 或者允许放大？
+            // 通常为了看清，允许放大比较好，或者保持 1 为基准。
+            // 这里我们直接缩放以适应屏幕。
+            universe.style.transform = `scale(${scale})`;
+        }
+
+        window.addEventListener('resize', resize);
+
+        initSolarSystem();
+        initAsteroidBelt();
+        resize(); // 初始化调用
+        animate();
+    </script>
+</body>
+</html>
