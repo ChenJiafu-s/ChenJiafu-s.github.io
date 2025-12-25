@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三体问题模拟 (Three-Body Problem)</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: auto;
+        }
+        button {
+            cursor: pointer;
+            padding: 5px 10px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+        button:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <!-- <div id="controls">
+        <div style="margin-top: 5px; font-size: 12px; color: #aaa;">
+            当物体飞出屏幕时，全员重生
+        </div>
+    </div> -->
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let bodies = [];
+        const G = 1; // 引力常数 (为了模拟方便，取1)
+        const TRAIL_LENGTH = 500; // 轨迹长度
+
+        // 视图控制
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        // let isFixedScreen = true; // 移除
+        // const FIXED_WIDTH = 1000;  
+        // const FIXED_HEIGHT = 800;  
+
+        class Body {
+            constructor(x, y, vx, vy, mass, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.mass = mass;
+                this.color = color;
+                this.trail = [];
+            }
+
+            update(bodies, dt) {
+                let fx = 0;
+                let fy = 0;
+
+                for (let other of bodies) {
+                    if (other === this) continue;
+
+                    const dx = other.x - this.x;
+                    const dy = other.y - this.y;
+                    const distSq = dx * dx + dy * dy;
+                    const dist = Math.sqrt(distSq);
+
+                    // 软化因子，防止距离过近时力趋于无穷大导致飞出
+                    const softening = 5; 
+                    const f = (G * this.mass * other.mass) / (distSq + softening);
+
+                    fx += f * (dx / dist);
+                    fy += f * (dy / dist);
+                }
+
+                const ax = fx / this.mass;
+                const ay = fy / this.mass;
+
+                this.vx += ax * dt;
+                this.vy += ay * dt;
+
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+
+                // 记录轨迹
+                if (frameCount % 2 === 0) { // 每几帧记录一次，优化性能
+                    this.trail.push({x: this.x, y: this.y});
+                    if (this.trail.length > TRAIL_LENGTH) {
+                        this.trail.shift();
+                    }
+                }
+            }
+
+            draw(ctx) {
+                // 绘制轨迹
+                if (this.trail.length > 1) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 1;
+                    ctx.globalAlpha = 0.5;
+                    ctx.moveTo(this.trail[0].x, this.trail[0].y);
+                    for (let i = 1; i < this.trail.length; i++) {
+                        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                    }
+                    ctx.stroke();
+                    ctx.globalAlpha = 1.0;
+                }
+
+                // 绘制质点
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                // 半径与质量相关，简单的视觉表现
+                const radius = Math.max(2, Math.sqrt(this.mass)); 
+                ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 发光效果
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        let frameCount = 0;
+        let simulationStartTime = 0;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.style.position = 'static';
+            canvas.style.transform = 'none';
+            canvas.style.border = 'none';
+            
+            canvas.width = width;
+            canvas.height = height;
+            // 重置视图中心
+            offsetX = width / 2;
+            offsetY = height / 2;
+        }
+
+        function createRandomBody(index) {
+            // 使用 HSL 颜色空间生成高对比度的颜色
+            // 将色相环分为3份，每份间隔120度，再加上随机偏移
+            const baseHue = (index * 120) + (Math.random() * 60 - 30); 
+            // 饱和度 70-100%，亮度 50-70%
+            const color = `hsl(${baseHue}, ${70 + Math.random() * 30}%, ${50 + Math.random() * 20}%)`;
+            
+            return new Body(
+                (Math.random() - 0.5) * 200, // x
+                (Math.random() - 0.5) * 200, // y
+                (Math.random() - 0.5) * 2,   // vx
+                (Math.random() - 0.5) * 2,   // vy
+                Math.random() * 20 + 10,     // mass (10-30)
+                color
+            );
+        }
+
+        function initRandom() {
+            simulationStartTime = Date.now();
+            bodies = [];
+            
+            const rand = Math.random();
+
+            // 15% 概率生成经典 "8" 字形稳定解
+            if (rand < 0.15) {
+                setStableFigure8();
+                return;
+            }
+            
+            // 15% 概率生成拉格朗日等边三角形
+            if (rand < 0.30) {
+                setLagrangeTriangle();
+                return;
+            }
+
+            // 15% 概率生成毕达哥拉斯三体问题 (Burrau's Problem) - 著名的混沌初始条件
+            if (rand < 0.45) {
+                setPythagorean();
+                return;
+            }
+
+            // 15% 概率生成布鲁克解 (Broucke's R) - 线性排列
+            if (rand < 0.60) {
+                setBrouckeLine();
+                return;
+            }
+            
+            // 15% 概率生成双星伴星系统 (Hierarchical)
+            if (rand < 0.75) {
+                setHierarchical();
+                return;
+            }
+
+            // 剩下的 25% 为完全随机混沌状态
+            for (let i = 0; i < 3; i++) {
+                bodies.push(createRandomBody(i));
+            }
+            scale = 1;
+        }
+
+        // 经典 "8" 字形稳定解
+        function setStableFigure8() {
+            // ... (代码不变)
+            const colors = getColors();
+            const x1 = 97.000436;
+            const y1 = -24.308753;
+            const vx3 = 0.93240737;
+            const vy3 = 0.86473146;
+            const vx1 = -vx3 / 2;
+            const vy1 = -vy3 / 2;
+            const m = 10;
+            const s = 1.0; 
+
+            bodies.push(new Body(x1*s, y1*s, vx1*s, vy1*s, m, colors[0]));
+            bodies.push(new Body(-x1*s, -y1*s, vx1*s, vy1*s, m, colors[1]));
+            bodies.push(new Body(0, 0, vx3*s, vy3*s, m, colors[2]));
+            
+            scale = 1.2;
+        }
+
+        // 毕达哥拉斯三体问题 (Burrau's Problem, 1913)
+        // 初始速度为0，三个物体构成 3-4-5 直角三角形
+        function setPythagorean() {
+            const colors = getColors();
+            // 坐标需要适当放大以适应屏幕
+            const s = 40; 
+            
+            // m1=3 at (1,3)
+            bodies.push(new Body(1*s, 3*s, 0, 0, 30, colors[0])); 
+            // m2=4 at (-2,-1)
+            bodies.push(new Body(-2*s, -1*s, 0, 0, 40, colors[1]));
+            // m3=5 at (1,-1)
+            bodies.push(new Body(1*s, -1*s, 0, 0, 50, colors[2]));
+            
+            // 这个系统初始是静止的，但引力会立即让它们坍缩并开始复杂的混沌运动
+            scale = 0.8;
+            // 需要重置中心
+            offsetX = width / 2; 
+            offsetY = height / 2 + 50; // 稍微下移一点居中
+        }
+
+        // 双星伴星系统 (Hierarchical System)
+        // 两个物体紧密绕转，第三个物体在远处绕它们转
+        function setHierarchical() {
+            const colors = getColors();
+            const m1 = 20, m2 = 20, m3 = 5;
+            const r_inner = 50;
+            const r_outer = 300;
+            
+            // 内部双星速度
+            const v_inner = Math.sqrt(G * m2 / (2 * r_inner)); // 简化估算
+            
+            // 外部速度 (把内部看作一个整体 M = m1+m2)
+            const v_outer = Math.sqrt(G * (m1 + m2) / r_outer);
+
+            bodies.push(new Body(-r_inner, 0, 0, v_inner, m1, colors[0]));
+            bodies.push(new Body(r_inner, 0, 0, -v_inner, m2, colors[1]));
+            
+            // 第三个物体在远处
+            bodies.push(new Body(0, r_outer, -v_outer, 0, m3, colors[2]));
+            
+            scale = 0.8;
+        }
+
+        function getColors() {
+            const colors = [];
+            for(let i=0; i<3; i++) {
+                const baseHue = (i * 120) + (Math.random() * 60 - 30);
+                colors.push(`hsl(${baseHue}, 80%, 60%)`);
+            }
+            return colors;
+        }
+
+        // 拉格朗日等边三角形 (简化版，中心大质量，两个小质量在 L4/L5)
+        // 或者三个等质量物体绕中心旋转
+        function setLagrangeTriangle() {
+            const colors = getColors();
+
+            const r = 100;
+            const v = Math.sqrt(G * 10 / (r * Math.sqrt(3))); // 粗略估算轨道速度 v = sqrt(GM/r)
+            // 三个物体构成等边三角形，绕中心旋转
+            // 实际上对于三体，如果质量相等，它们都在同一个圆轨道上，相隔 120度
+            
+            const m = 10;
+            // 精确速度计算: 向心力 F = G*m^2 / (sqrt(3)*r)^2 * 2 * cos(30) = m * v^2 / r
+            // 距离 d = sqrt(3) * r
+            // F_one = G*m*m / (3*r^2)
+            // F_total = 2 * F_one * cos(30) = 2 * (Gm^2/3r^2) * (sqrt(3)/2) = Gm^2 / (sqrt(3)r^2)
+            // m * v^2 / r = Gm^2 / (sqrt(3)r^2)
+            // v^2 = Gm / (sqrt(3)r)
+            // v = sqrt(Gm / (sqrt(3)r))
+            
+            const speed = Math.sqrt(G * m / (Math.sqrt(3) * r));
+
+            for (let i = 0; i < 3; i++) {
+                const angle = i * (Math.PI * 2 / 3);
+                const x = r * Math.cos(angle);
+                const y = r * Math.sin(angle);
+                // 速度方向垂直于位置向量
+                const vx = -speed * Math.sin(angle);
+                const vy = speed * Math.cos(angle);
+                
+                bodies.push(new Body(x, y, vx, vy, m, colors[i]));
+            }
+            scale = 1.0;
+        }
+
+        // 布鲁克解 (Broucke A) - 线性排列，中间不动，两边对称椭圆
+        // 这里模拟一个简化的共线解
+        function setBrouckeLine() {
+            const colors = getColors();
+            
+            // 欧拉共线解 (Euler's collinear solution) 是不稳定的
+            // 我们可以尝试模拟两个大质量天体绕中心旋转，中间一个小质量天体在 L1 点（不稳定但能维持一会）
+            
+            const r = 100;
+            const m_big = 20;
+            const m_small = 0.1;
+            
+            const v = Math.sqrt(G * m_big / (2 * r)); // 双星环绕速度 v = sqrt(GM/2r) ? 距离是 2r
+            // F = G*M^2 / (2r)^2 = M * v^2 / r => v^2 = GM/4r
+            const speed = Math.sqrt(G * m_big / (4 * r));
+
+            bodies.push(new Body(-r, 0, 0, speed, m_big, colors[0]));
+            bodies.push(new Body(r, 0, 0, -speed, m_big, colors[1]));
+            bodies.push(new Body(0, 0, 0, 0, m_small, colors[2])); // 中间的小天体
+            
+            scale = 1.0;
+        }
+
+        function toggleFixedScreen() {
+            // 已废弃
+        }
+
+        function resetSimulation() {
+            initRandom();
+        }
+
+        function checkBoundsAndRegenerate() {
+            // 定义边界：屏幕外一定距离 (比如屏幕尺寸的 1.5 倍)
+            // 注意：x, y 是相对于中心的偏移
+            const limitX = (width / 2) / scale * 1.5;
+            const limitY = (height / 2) / scale * 1.5;
+
+            for (let i = 0; i < bodies.length; i++) {
+                const b = bodies[i];
+                // 检查是否超出边界
+                // 这里的 x,y 是物理坐标，(0,0) 是屏幕中心(如果没有平移)
+                // 考虑到用户可能拖拽了视图 (offsetX, offsetY)，我们需要把物理坐标转换到屏幕坐标
+                // 屏幕坐标 screenX = b.x * scale + offsetX
+                // 我们判断 screenX 是否在 [0, width] 之外很远的地方
+                
+                const screenX = b.x * scale + offsetX;
+                const screenY = b.y * scale + offsetY;
+                
+                const margin = 100; // 缓冲区
+                
+                if (screenX < -margin || screenX > width + margin ||
+                    screenY < -margin || screenY > height + margin) {
+                    
+                    // 只要有一个飞出，就全部重置
+                    initRandom();
+                    return; // 重置后无需继续检查
+                }
+            }
+        }
+
+        function loop() {
+            // 物理更新步长，为了精度可以进行多次小步长更新
+            const dt = 0.1; 
+            const steps = 5; // 每帧计算5次物理，提高平滑度和精度
+
+            for (let i = 0; i < steps; i++) {
+                // 先计算并更新状态
+                // 这里简单地每个物体单独更新，对于更严谨的模拟应该先算所有力再更新所有速度
+                // 但对于简单演示，半隐式欧拉也行。为了对称性，最好同步更新。
+                
+                // 1. 计算所有力/加速度
+                // 暂存加速度以实现同步更新
+                const accelerations = bodies.map(body => {
+                    let fx = 0, fy = 0;
+                    for (let other of bodies) {
+                        if (other === body) continue;
+                        const dx = other.x - body.x;
+                        const dy = other.y - body.y;
+                        const distSq = dx * dx + dy * dy;
+                        const dist = Math.sqrt(distSq);
+                        const softening = 5;
+                        const f = (G * body.mass * other.mass) / (distSq + softening);
+                        fx += f * (dx / dist);
+                        fy += f * (dy / dist);
+                    }
+                    return { ax: fx / body.mass, ay: fy / body.mass };
+                });
+
+                // 2. 更新速度和位置
+                bodies.forEach((body, index) => {
+                    const acc = accelerations[index];
+                    body.vx += acc.ax * dt;
+                    body.vy += acc.ay * dt;
+                    body.x += body.vx * dt;
+                    body.y += body.vy * dt;
+                    
+                    // 轨迹更新逻辑移到外面，或者降低频率
+                });
+            }
+            
+            // 轨迹记录放在物理步进循环外，每帧一次
+            bodies.forEach(b => {
+                b.trail.push({x: b.x, y: b.y});
+                if (b.trail.length > TRAIL_LENGTH) b.trail.shift();
+            });
+
+            // 检查边界并重新生成
+            checkBoundsAndRegenerate();
+
+            // 检查运行时间，超过 1 分钟 (60000ms) 则重置
+            if (Date.now() - simulationStartTime > 60000) {
+                initRandom();
+            }
+
+            // 渲染
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // 拖尾效果背景清除
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(scale, scale);
+
+            bodies.forEach(body => body.draw(ctx));
+
+            ctx.restore();
+
+            frameCount++;
+            requestAnimationFrame(loop);
+        }
+
+        // canvas.addEventListener('wheel', e => {
+        //     e.preventDefault();
+        //     const zoomSpeed = 0.001;
+        //     scale += e.deltaY * -zoomSpeed;
+        //     scale = Math.max(0.1, scale);
+        // });
+
+        window.addEventListener('resize', resize);
+
+        // 启动
+        resize();
+        initRandom(); // 默认随机
+        loop();
+
+    </script>
+</body>
+</html>
